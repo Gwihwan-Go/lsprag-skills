@@ -20,10 +20,12 @@ This avoids repeating broad setup docs in every skill folder.
 
 ## Included
 
-- `skills/lsprag-reference-info`: skill wrapper for `getReferenceInfo`
-- `skills/lsprag-def-tree`: skill wrapper for `buildDefTree`
-- `src/referenceCore.ts`: portable reference-analysis core
-- `src/treeCore.ts`: portable definition-tree core
+- `skills/lsprag-reference-info`: portable `getReferenceInfo` skill
+- `src/referenceCore.ts`: standalone implementation used by the skill
+- `skills/lsprag-retrieve-defs`: portable `retrieveDefs` skill
+- `src/definitionCore.ts`: standalone definition retrieval helpers
+- `skills/lsprag-def-tree`: portable `buildDefTree` skill
+- `src/treeCore.ts`: standalone definition tree implementation (plus core helpers)
 
 ## Install
 
