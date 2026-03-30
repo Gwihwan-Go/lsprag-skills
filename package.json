@@ -6,7 +6,6 @@
     "test:core": "tsx tests/def-tree.core.test.ts",
     "test:deps": "tsx tests/skill-only.deps.test.ts",
     "test:opencode": "tsx tests/opencode/def-tree.opencode.test.ts",
-    "test:docker": "bash tests/docker/run-integration.sh",
     "test": "npm run test:core && npm run test:deps"
   },
   "devDependencies": {

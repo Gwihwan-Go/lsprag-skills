@@ -31,16 +31,3 @@ Optional OpenCode integration test:
 ```bash
 npm run test:opencode
 ```
-
-Docker integration test (installs OpenCode + Claude Code in a clean container):
-
-```bash
-npm run test:docker
-```
-
-Notes:
-
-- Requires a running Docker daemon.
-- The container installs OpenCode and Claude Code using their official install scripts:
-  - `curl -fsSL https://opencode.ai/install | bash`
-  - `curl -fsSL https://claude.ai/install.sh | bash`
