@@ -1,0 +1,548 @@
+# Source Code
+def compute(self, operation: str, a: int, b: int) -> int:
+        """Perform a computation using math_utils functions."""
+        if operation == "add":
+            self.result = add(a, b)
+        elif operation == "multiply":
+            self.result = multiply(a, b)
+        return self.result
+
+# Context
+[
+  {
+    "name": "compute",
+    "context": "",
+    "need_example": true,
+    "hint": [
+      "focal method"
+    ]
+  },
+  {
+    "name": "operation",
+    "need_definition": true,
+    "need_example": true,
+    "need_full_definition": false,
+    "context": "[L18] operation: str",
+    "example": "",
+    "token": {
+      "id": "17:22",
+      "word": "operation",
+      "line": 17,
+      "startChar": 22,
+      "length": 9,
+      "type": "parameter",
+      "modifiers": [
+        "declaration"
+      ],
+      "definition": [
+        {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 17,
+              "character": 22
+            },
+            {
+              "line": 17,
+              "character": 36
+            }
+          ]
+        }
+      ],
+      "context": "",
+      "document": {
+        "uri": {
+          "$mid": 1,
+          "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+          "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "scheme": "file"
+        },
+        "fileName": "/LSPRAG/src/test/fixtures/python/calculator.py",
+        "isUntitled": false,
+        "languageId": "python",
+        "version": 1,
+        "isClosed": false,
+        "isDirty": false,
+        "encoding": "utf8",
+        "eol": 1,
+        "lineCount": 41
+      },
+      "defSymbol": {
+        "name": "operation",
+        "kind": "Variable",
+        "location": {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 17,
+              "character": 22
+            },
+            {
+              "line": 17,
+              "character": 36
+            }
+          ]
+        },
+        "containerName": ""
+      },
+      "defSymbolRange": null
+    },
+    "hint": [
+      "operation == \"add\"",
+      "operation == \"multiply\""
+    ]
+  },
+  {
+    "name": "a",
+    "need_definition": true,
+    "need_example": true,
+    "need_full_definition": false,
+    "context": "[L18] a: int",
+    "example": "",
+    "token": {
+      "id": "17:38",
+      "word": "a",
+      "line": 17,
+      "startChar": 38,
+      "length": 1,
+      "type": "parameter",
+      "modifiers": [
+        "declaration"
+      ],
+      "definition": [
+        {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 17,
+              "character": 38
+            },
+            {
+              "line": 17,
+              "character": 44
+            }
+          ]
+        }
+      ],
+      "context": "",
+      "document": {
+        "uri": {
+          "$mid": 1,
+          "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+          "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "scheme": "file"
+        },
+        "fileName": "/LSPRAG/src/test/fixtures/python/calculator.py",
+        "isUntitled": false,
+        "languageId": "python",
+        "version": 1,
+        "isClosed": false,
+        "isDirty": false,
+        "encoding": "utf8",
+        "eol": 1,
+        "lineCount": 41
+      },
+      "defSymbol": {
+        "name": "a",
+        "kind": "Variable",
+        "location": {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 17,
+              "character": 38
+            },
+            {
+              "line": 17,
+              "character": 44
+            }
+          ]
+        },
+        "containerName": ""
+      },
+      "defSymbolRange": null
+    },
+    "hint": [
+      "operation == \"add\"",
+      "operation == \"multiply\""
+    ]
+  },
+  {
+    "name": "b",
+    "need_definition": true,
+    "need_example": true,
+    "need_full_definition": false,
+    "context": "[L18] b: int",
+    "example": "",
+    "token": {
+      "id": "17:46",
+      "word": "b",
+      "line": 17,
+      "startChar": 46,
+      "length": 1,
+      "type": "parameter",
+      "modifiers": [
+        "declaration"
+      ],
+      "definition": [
+        {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 17,
+              "character": 46
+            },
+            {
+              "line": 17,
+              "character": 52
+            }
+          ]
+        }
+      ],
+      "context": "",
+      "document": {
+        "uri": {
+          "$mid": 1,
+          "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+          "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "scheme": "file"
+        },
+        "fileName": "/LSPRAG/src/test/fixtures/python/calculator.py",
+        "isUntitled": false,
+        "languageId": "python",
+        "version": 1,
+        "isClosed": false,
+        "isDirty": false,
+        "encoding": "utf8",
+        "eol": 1,
+        "lineCount": 41
+      },
+      "defSymbol": {
+        "name": "b",
+        "kind": "Variable",
+        "location": {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 17,
+              "character": 46
+            },
+            {
+              "line": 17,
+              "character": 52
+            }
+          ]
+        },
+        "containerName": ""
+      },
+      "defSymbolRange": null
+    }
+  },
+  {
+    "name": "result",
+    "need_definition": true,
+    "need_example": false,
+    "need_full_definition": false,
+    "context": "[L13] \"\"\"A simple calculator class.\"\"\"\n[L14] \n[L15] def __init__(self):\n[L16] self.result = 0\n[L17] \n[L18] def compute(self, operation: str, a: int, b: int) -> int:\n[L19] \"\"\"Perform a computation using math_utils functions.\"\"\"",
+    "example": "",
+    "token": {
+      "id": "20:17",
+      "word": "result",
+      "line": 20,
+      "startChar": 17,
+      "length": 6,
+      "type": "property",
+      "modifiers": [],
+      "definition": [
+        {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 15,
+              "character": 13
+            },
+            {
+              "line": 15,
+              "character": 19
+            }
+          ]
+        },
+        {
+          "uri": {
+            "$mid": 1,
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 20,
+              "character": 17
+            },
+            {
+              "line": 20,
+              "character": 23
+            }
+          ]
+        },
+        {
+          "uri": {
+            "$mid": 1,
+            "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+            "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 22,
+              "character": 17
+            },
+            {
+              "line": 22,
+              "character": 23
+            }
+          ]
+        }
+      ],
+      "context": "",
+      "document": {
+        "uri": {
+          "$mid": 1,
+          "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+          "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "scheme": "file"
+        },
+        "fileName": "/LSPRAG/src/test/fixtures/python/calculator.py",
+        "isUntitled": false,
+        "languageId": "python",
+        "version": 1,
+        "isClosed": false,
+        "isDirty": false,
+        "encoding": "utf8",
+        "eol": 1,
+        "lineCount": 41
+      },
+      "defSymbol": null,
+      "defSymbolRange": null
+    },
+    "hint": [
+      "operation == \"add\""
+    ]
+  },
+  {
+    "name": "add",
+    "need_definition": true,
+    "need_example": false,
+    "need_full_definition": true,
+    "context": "[L3] def add(a: int, b: int) -> int:\n[L4]     \"\"\"Add two numbers.\"\"\"\n[L5]     return a + b",
+    "example": "",
+    "token": {
+      "id": "20:26",
+      "word": "add",
+      "line": 20,
+      "startChar": 26,
+      "length": 3,
+      "type": "function",
+      "modifiers": [],
+      "definition": [
+        {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/math_utils.py",
+            "path": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 2,
+              "character": 4
+            },
+            {
+              "line": 2,
+              "character": 7
+            }
+          ]
+        }
+      ],
+      "context": "",
+      "document": {
+        "uri": {
+          "$mid": 1,
+          "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+          "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "scheme": "file"
+        },
+        "fileName": "/LSPRAG/src/test/fixtures/python/calculator.py",
+        "isUntitled": false,
+        "languageId": "python",
+        "version": 1,
+        "isClosed": false,
+        "isDirty": false,
+        "encoding": "utf8",
+        "eol": 1,
+        "lineCount": 41
+      },
+      "defSymbol": {
+        "name": "add",
+        "kind": "Function",
+        "location": {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/math_utils.py",
+            "path": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 2,
+              "character": 0
+            },
+            {
+              "line": 4,
+              "character": 16
+            }
+          ]
+        },
+        "containerName": ""
+      },
+      "defSymbolRange": null
+    },
+    "hint": [
+      "operation == \"add\""
+    ]
+  },
+  {
+    "name": "multiply",
+    "need_definition": true,
+    "need_example": false,
+    "need_full_definition": true,
+    "context": "[L7] def multiply(a: int, b: int) -> int:\n[L8]     \"\"\"Multiply two numbers.\"\"\"\n[L9]     return a * b",
+    "example": "",
+    "token": {
+      "id": "22:26",
+      "word": "multiply",
+      "line": 22,
+      "startChar": 26,
+      "length": 8,
+      "type": "function",
+      "modifiers": [],
+      "definition": [
+        {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/math_utils.py",
+            "path": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 6,
+              "character": 4
+            },
+            {
+              "line": 6,
+              "character": 12
+            }
+          ]
+        }
+      ],
+      "context": "",
+      "document": {
+        "uri": {
+          "$mid": 1,
+          "fsPath": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "external": "file:///LSPRAG/src/test/fixtures/python/calculator.py",
+          "path": "/LSPRAG/src/test/fixtures/python/calculator.py",
+          "scheme": "file"
+        },
+        "fileName": "/LSPRAG/src/test/fixtures/python/calculator.py",
+        "isUntitled": false,
+        "languageId": "python",
+        "version": 1,
+        "isClosed": false,
+        "isDirty": false,
+        "encoding": "utf8",
+        "eol": 1,
+        "lineCount": 41
+      },
+      "defSymbol": {
+        "name": "multiply",
+        "kind": "Function",
+        "location": {
+          "uri": {
+            "$mid": 1,
+            "fsPath": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "external": "file:///LSPRAG/src/test/fixtures/python/math_utils.py",
+            "path": "/LSPRAG/src/test/fixtures/python/math_utils.py",
+            "scheme": "file"
+          },
+          "range": [
+            {
+              "line": 6,
+              "character": 0
+            },
+            {
+              "line": 8,
+              "character": 16
+            }
+          ]
+        },
+        "containerName": ""
+      },
+      "defSymbolRange": null
+    },
+    "hint": [
+      "operation == \"multiply\""
+    ]
+  }
+]

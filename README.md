@@ -24,6 +24,8 @@ This avoids repeating broad setup docs in every skill folder.
 - `src/referenceCore.ts`: standalone implementation used by the skill
 - `skills/lsprag-retrieve-defs`: portable `retrieveDefs` skill
 - `src/definitionCore.ts`: standalone definition retrieval helpers
+- `skills/lsprag-token-defs`: portable token decoding + definition matching skill
+- `src/tokenDefsCore.ts`: standalone token-to-definition pipeline
 - `skills/lsprag-def-tree`: portable `buildDefTree` skill
 - `src/treeCore.ts`: standalone definition tree implementation (plus core helpers)
 

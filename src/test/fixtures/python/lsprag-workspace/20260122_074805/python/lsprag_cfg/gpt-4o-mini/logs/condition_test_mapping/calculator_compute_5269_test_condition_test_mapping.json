@@ -1,0 +1,12 @@
+[
+  {
+    "index": 0,
+    "condition": "operation == \"add\"",
+    "testNamePrefix": "test_calculator_compute_5269_test_0"
+  },
+  {
+    "index": 1,
+    "condition": "operation == \"multiply\"",
+    "testNamePrefix": "test_calculator_compute_5269_test_1"
+  }
+]

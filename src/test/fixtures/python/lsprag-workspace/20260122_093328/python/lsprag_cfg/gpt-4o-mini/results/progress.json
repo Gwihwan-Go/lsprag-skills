@@ -1,0 +1,16 @@
+{
+  "totalTasks": 1,
+  "completedTasks": 1,
+  "tasks": [
+    {
+      "symbolName": "compute",
+      "sourceCode": "def compute(self, operation: str, a: int, b: int) -> int:\n        \"\"\"Perform a computation using math_utils functions.\"\"\"\n        if operation == \"add\":\n            self.result = add(a, b)\n        elif operation == \"multiply\":\n            self.result = multiply(a, b)\n        return self.result",
+      "importString": "from math_utils import add, multiply, calculate_sum",
+      "lineNum": 6,
+      "relativeDocumentPath": "calculator.py",
+      "completed": true,
+      "timestamp": "2026-01-22T09:34:01.987Z"
+    }
+  ],
+  "lastUpdated": "2026-01-22T09:34:01.987Z"
+}
