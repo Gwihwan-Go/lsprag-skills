@@ -6,6 +6,8 @@ Minimal, portable skill implementations extracted from LSPRAG.
 
 - `skills/lsprag-reference-info`: portable `getReferenceInfo` skill
 - `src/referenceCore.ts`: standalone implementation used by the skill
+- `skills/lsprag-retrieve-defs`: portable `retrieveDefs` skill
+- `src/definitionCore.ts`: standalone definition retrieval helpers
 - `skills/lsprag-def-tree`: portable `buildDefTree` skill
 - `src/treeCore.ts`: standalone definition tree implementation (plus core helpers)
 
