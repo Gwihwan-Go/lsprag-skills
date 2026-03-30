@@ -31,3 +31,9 @@ Optional OpenCode integration test:
 ```bash
 npm run test:opencode
 ```
+
+Docker integration test (installs OpenCode + Claude Code in a clean container):
+
+```bash
+npm run test:docker
+```
