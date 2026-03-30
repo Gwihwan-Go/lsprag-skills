@@ -1,0 +1,6 @@
+interface:
+  display_name: "LSPRAG Definition Tree"
+  short_description: "Portable buildDefTree module"
+  default_prompt: "Use $lsprag-def-tree to export and wire buildDefTree in a non-VSCode environment."
+policy:
+  allow_implicit_invocation: true
