@@ -20,6 +20,12 @@ npm install
 npm run test:core
 ```
 
+Skill-only dependency check:
+
+```bash
+npm run test:deps
+```
+
 Optional OpenCode integration test:
 
 ```bash
