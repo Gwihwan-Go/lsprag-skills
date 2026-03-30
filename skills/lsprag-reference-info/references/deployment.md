@@ -41,10 +41,8 @@ mkdir -p ~/.config/opencode/skill && ln -s "$(pwd)/skills/lsprag-reference-info"
 
 ### One‑Command Install (GitHub repo)
 
-If you publish this repo as `lsprag-skills`, replace `<OWNER>` with your GitHub org/user:
-
 ```bash
-git clone --depth 1 https://github.com/<OWNER>/lsprag-skills ~/.lsprag-skills && mkdir -p ~/.codex/skills && ln -s ~/.lsprag-skills/skills/lsprag-reference-info ~/.codex/skills/lsprag-reference-info
+git clone --depth 1 https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills && mkdir -p ~/.codex/skills && ln -s ~/.lsprag-skills/skills/lsprag-reference-info ~/.codex/skills/lsprag-reference-info
 ```
 
 Update later with:
