@@ -1,161 +1,193 @@
 # lsprag-skills
 
-Portable LSPRAG skills and core modules that can run outside VS Code.
+Portable LSP analysis tools for AI agents — build definition trees, resolve symbol references, and decode semantic tokens from any codebase without VS Code.
 
-## Repository Layout
+## What Is This?
 
-- `src/`: portable TypeScript core modules
-- `skills/`: lightweight skill descriptors and skill-scoped references
-- `tests/`: core and integration smoke tests
+This repository ships four skills that let AI agents (Claude Code, OpenCode, etc.) analyze code using Language Server Protocol (LSP) data:
 
-## Skills Directory Policy
+| Skill | What it does |
+|-------|-------------|
+| `lsprag-def-tree` | Build a definition tree from a symbol (shows what functions/methods a function calls) |
+| `lsprag-reference-info` | Find all callers of a symbol across a codebase |
+| `lsprag-retrieve-defs` | Resolve where each token in a symbol is defined |
+| `lsprag-token-defs` | Extract tokens from a symbol and resolve their definitions in one call |
 
-To keep this repository clean:
+**No VS Code required.** Each skill is a portable TypeScript module you wire to any LSP server.
 
-- Put repository-level setup, environment, model, and multi-agent install instructions in this README.
-- Keep each `skills/*/SKILL.md` focused on skill intent and usage contract.
-- Keep `skills/*/references/*` focused on skill-specific API/deployment details.
+## Prerequisites
 
-This avoids repeating broad setup docs in every skill folder.
+- **Node.js 18+** and **npm** (to run the TypeScript modules)
+- **An LSP server** for your language (e.g. `gopls` for Go, `tsserver` for TypeScript)
 
-## Included
-
-- `skills/lsprag-reference-info`: portable `getReferenceInfo` skill
-- `src/referenceCore.ts`: standalone implementation used by the skill
-- `skills/lsprag-retrieve-defs`: portable `retrieveDefs` skill
-- `src/definitionCore.ts`: standalone definition retrieval helpers
-- `skills/lsprag-token-defs`: portable token decoding + definition matching skill
-- `src/tokenDefsCore.ts`: standalone token-to-definition pipeline
-- `skills/lsprag-def-tree`: portable `buildDefTree` skill
-- `src/treeCore.ts`: standalone definition tree implementation (plus core helpers)
-
-## Install
+## Quick Install
 
 ```bash
+# 1. Clone and install dependencies
+git clone https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills
+cd ~/.lsprag-skills
 npm install
+
+# 2. Verify everything works
+npm test
 ```
 
-## Install Skills (Agent Runtime)
+## Install for Claude Code
 
-Common community skill paths:
-
-- Claude Code: `~/.claude/skills/`
-- Gemini: `~/.gemini/skills/`
-- Codex: `~/.codex/skills/`
-- OpenCode: `~/.config/opencode/skill/`
-
-Example (Codex):
+The skills in `skills/` are markdown skill files for Claude Code. Copy them to your Claude skills directory:
 
 ```bash
-mkdir -p ~/.codex/skills
-ln -sfn /absolute/path/to/lsprag-skills/skills/lsprag-def-tree ~/.codex/skills/lsprag-def-tree
-ln -sfn /absolute/path/to/lsprag-skills/skills/lsprag-reference-info ~/.codex/skills/lsprag-reference-info
+REPO=~/.lsprag-skills
+mkdir -p ~/.claude/skills
+cp -r "$REPO/skills/lsprag-def-tree"         ~/.claude/skills/
+cp -r "$REPO/skills/lsprag-reference-info"   ~/.claude/skills/
+cp -r "$REPO/skills/lsprag-retrieve-defs"    ~/.claude/skills/
+cp -r "$REPO/skills/lsprag-token-defs"       ~/.claude/skills/
 ```
 
-For skill-specific API usage, see:
-
-- `skills/lsprag-def-tree/references/deployment.md`
-- `skills/lsprag-reference-info/references/deployment.md`
-
-## OpenCode Integration
-
-1. Install OpenCode CLI:
+Then tell Claude the path to this repo so it can run the code:
 
 ```bash
-npm install -g opencode-ai
+export LSPRAG_SKILLS_ROOT=~/.lsprag-skills
 ```
 
-2. Install OpenCode tool SDK dependency (needed for custom tool smoke tests):
+Add that line to your `~/.bashrc` or `~/.zshrc` to make it permanent.
+
+**Usage in Claude Code:**
+
+Ask Claude to use `$lsprag-def-tree` (or any other skill) in your prompt, or Claude will automatically invoke it when you ask about code structure.
+
+## Install for OpenCode
+
+OpenCode tools live in `~/.config/opencode/tools/`. Copy the ready-to-use tool file:
 
 ```bash
-npm install --prefix ~/.config/opencode @opencode-ai/plugin
+REPO=~/.lsprag-skills
+mkdir -p ~/.config/opencode/tools
+cp "$REPO/tools/lsprag_def_tree.ts" ~/.config/opencode/tools/
 ```
 
-3. Link both skills into OpenCode:
+Set the repo root so the tool can find the core modules:
 
 ```bash
-REPO_ROOT="/absolute/path/to/lsprag-skills"
-mkdir -p ~/.config/opencode/skill
-ln -sfn "$REPO_ROOT/skills/lsprag-def-tree" ~/.config/opencode/skill/lsprag-def-tree
-ln -sfn "$REPO_ROOT/skills/lsprag-reference-info" ~/.config/opencode/skill/lsprag-reference-info
+export LSPRAG_SKILLS_ROOT=~/.lsprag-skills
 ```
 
-4. Verify OpenCode can discover the skills:
+Add that to your `~/.bashrc` or `~/.zshrc`.
+
+Restart OpenCode. The tool `lsprag_def_tree` will appear automatically.
+
+> **Note:** OpenCode's plugin system requires `@opencode-ai/plugin`.
+> Install it if missing: `npm install --prefix ~/.config/opencode @opencode-ai/plugin`
+
+## One-Line Install Script
 
 ```bash
-opencode debug skill
+curl -fsSL https://raw.githubusercontent.com/Gwihwan-Go/lsprag-skills/main/install.sh | bash
 ```
 
-## LSP Server Prerequisite
-
-These skills rely on an LSP backend (for example `gopls` for Go).
-
-Quick check from repo root:
+Or run locally from the repo root:
 
 ```bash
-gopls_path="$(./scripts/ensure-gopls.sh)"
-"$gopls_path" serve
+bash install.sh
 ```
 
-Manual install example:
+The script detects whether you have Claude Code or OpenCode installed and wires up the tools automatically.
+
+## Use the CLI Scripts Directly
+
+The `scripts/` directory has standalone CLI wrappers you can call from the terminal (or from a Claude Code Bash tool):
+
+```bash
+# Build a definition tree for a function
+npx tsx ~/.lsprag-skills/scripts/def-tree-cli.ts --file /path/to/file.ts --symbol myFunction
+
+# Find references to a symbol
+npx tsx ~/.lsprag-skills/scripts/reference-info-cli.ts --file /path/to/file.ts --line 10 --col 5
+```
+
+## LSP Server Setup
+
+The skills need an LSP server running for your language.
+
+### Go (`gopls`)
 
 ```bash
 go install golang.org/x/tools/gopls@latest
-gopls serve
 ```
 
-## AIDP (From `.env`)
-
-If you use the same endpoint pattern as `llm-test.py`, load env first:
+Helper script that finds or installs gopls automatically:
 
 ```bash
-set -a
-source /absolute/path/to/.env
-set +a
+gopls_path="$(~/.lsprag-skills/scripts/ensure-gopls.sh)"
 ```
 
-Check required vars:
+### TypeScript (`tsserver`)
 
 ```bash
-[ -n "$AIDP_AK" ] && echo "AIDP_AK exists" || echo "AIDP_AK missing"
-[ -n "$AIDP_ENDPOINT" ] && echo "AIDP_ENDPOINT exists" || echo "AIDP_ENDPOINT missing"
+npm install -g typescript
+# tsserver is bundled with typescript
 ```
 
-Install custom provider dependency and run OpenCode with AIDP model:
+### Python (`pylsp`)
 
 ```bash
-npm install --prefix ~/.config/opencode @ai-sdk/openai-compatible
-opencode run --agent summary --model aidp/gemini-2.5-pro "hello"
+pip install python-lsp-server
 ```
 
-Note: `aidp/gemini-2.5-pro` works for plain model calls, but OpenCode tool-calling flows may fail with schema validation errors from the backend. For skill/tool smoke tests, keep using `opencode/gpt-5-nano` unless your AIDP backend supports OpenCode tool schemas.
+The skills use semantic tokens and go-to-definition requests — any LSP server that supports `textDocument/semanticTokens` and `textDocument/definition` will work.
+
+## Architecture: The Provider Pattern
+
+Each skill accepts a **Provider** object you implement. The provider connects the skill to your LSP client:
+
+```ts
+import { buildDefTree, TokenProvider } from "~/.lsprag-skills/src/treeCore.js";
+
+const provider: TokenProvider = {
+  // Open a document and return its text
+  openDocument: async (uri) => ({
+    uri,
+    languageId: "typescript",
+    getText: () => fs.readFileSync(new URL(uri).pathname, "utf8"),
+  }),
+  // Return document symbols (from LSP textDocument/documentSymbol)
+  getDocumentSymbols: async (uri) => lspClient.documentSymbols(uri),
+  // Return go-to-definition results (from LSP textDocument/definition)
+  getDefinitions: async (doc, pos) => lspClient.definition(doc.uri, pos),
+  // Return semantic tokens (from LSP textDocument/semanticTokens/range)
+  getSemanticTokensRange: async (doc, range) => lspClient.semanticTokensRange(doc.uri, range),
+  getSemanticTokensLegendRange: async (doc, range) => lspClient.semanticTokensLegend(doc.uri, range),
+};
+
+const tree = await buildDefTree(document, symbol, provider, 3);
+```
+
+The CLI scripts in `scripts/` and the OpenCode tool in `tools/` include self-contained provider implementations you can read and adapt.
 
 ## Tests
 
-Run core + dependency checks:
-
 ```bash
-npm run test
-```
+# Core logic tests (no LSP server needed)
+npm test
 
-Run OpenCode smoke test:
-
-```bash
+# OpenCode integration smoke test (requires opencode CLI)
 npm run test:opencode
 ```
 
-`test:opencode` runs `tests/opencode/def-tree.opencode.test.ts`.
+## Repository Layout
 
-Default model behavior:
-- Default: `opencode/gpt-5-nano` (no external API key required).
-- AIDP opt-in: set `OPENCODE_USE_AIDP=1` (or set `OPENCODE_TEST_MODEL=aidp/gemini-2.5-pro`).
-
-Use another model if needed:
-
-```bash
-OPENCODE_TEST_MODEL=deepseek/deepseek-chat DEEPSEEK_API_KEY=... npm run test:opencode
+```
+src/         portable TypeScript core modules
+skills/      skill descriptors for agent runtimes
+tools/       ready-to-deploy OpenCode tool files
+scripts/     CLI wrappers (run with tsx)
+tests/       core unit tests + OpenCode integration test
 ```
 
-```bash
-OPENCODE_USE_AIDP=1 AIDP_AK=... AIDP_ENDPOINT=... npm run test:opencode
-```
+## Skill-Specific Docs
+
+- `skills/lsprag-def-tree/SKILL.md`
+- `skills/lsprag-reference-info/SKILL.md`
+- `skills/lsprag-retrieve-defs/SKILL.md`
+- `skills/lsprag-token-defs/SKILL.md`

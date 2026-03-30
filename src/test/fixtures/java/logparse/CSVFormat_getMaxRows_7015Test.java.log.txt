@@ -1,5 +1,0 @@
-[EXECUTOR][JAVA] Step 1: compile
-... javac output ...
-[EXECUTOR][JAVA] Compilation failed, skipping execution.
-
-

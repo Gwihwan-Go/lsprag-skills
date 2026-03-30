@@ -1,3 +1,0 @@
-"""Python test fixtures package."""
-
-
