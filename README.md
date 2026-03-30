@@ -17,7 +17,7 @@ See `skills/lsprag-reference-info/references/deployment.md` for one‑command in
 
 ```bash
 npm install
-npm run test:core
+npm run test
 ```
 
 Skill-only dependency check:

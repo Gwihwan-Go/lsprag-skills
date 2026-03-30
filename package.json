@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "test:core": "tsx tests/def-tree.core.test.ts",
+    "test:core-go": "tsx tests/def-tree.core-go.test.ts",
     "test:deps": "tsx tests/skill-only.deps.test.ts",
     "test:opencode": "tsx tests/opencode/def-tree.opencode.test.ts",
-    "test": "npm run test:core && npm run test:deps"
+    "test": "npm run test:core && npm run test:core-go && npm run test:deps"
   },
   "devDependencies": {
     "tsx": "^4.7.0",

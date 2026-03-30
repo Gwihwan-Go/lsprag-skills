@@ -7,7 +7,8 @@ import { spawnSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
-const fixturePath = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.ts");
+const fixturePathTs = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.ts");
+const fixturePathGo = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.go");
 
 function commandExists(cmd: string): boolean {
   const result = spawnSync("which", [cmd], { encoding: "utf8" });
@@ -100,9 +101,12 @@ function rangeFromOffsets(start, end, offsets) {
   return { start: positionAt(start, offsets), end: positionAt(end, offsets) };
 }
 
-function buildFunctionSymbols(text, lineOffsets) {
+function buildFunctionSymbols(text, lineOffsets, languageId) {
   const symbols = [];
-  const regex = /function\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(/g;
+  const regex =
+    languageId === "go"
+      ? /func\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(/g
+      : /function\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(/g;
   let match;
   while ((match = regex.exec(text))) {
     const name = match[1];
@@ -169,7 +173,7 @@ function getWordAt(lines, position) {
 }
 
 export const lsprag_def_tree = tool({
-  description: "LSPRAG: build a lightweight definition tree (JS/TS function declarations).",
+  description: "LSPRAG: build a lightweight definition tree (JS/TS/Go function declarations).",
   args: {
     filePath: tool.schema.string().describe("Absolute path or relative path to the source file"),
     symbolName: tool.schema.string().describe("Function name to build the tree from"),
@@ -185,6 +189,8 @@ export const lsprag_def_tree = tool({
     const text = fs.readFileSync(absolutePath, "utf8");
     const lines = text.split("\\n");
     const lineOffsets = buildLineOffsets(text);
+    const extension = path.extname(absolutePath).toLowerCase();
+    const languageId = extension === ".go" ? "go" : "typescript";
 
     const { buildDefTree, prettyPrintDefTree } = await import(
       pathToFileURL(path.join(root, "src", "treeCore.ts")).href
@@ -192,7 +198,7 @@ export const lsprag_def_tree = tool({
 
     const document = {
       uri: pathToFileURL(absolutePath).href,
-      languageId: "typescript",
+      languageId,
       getText: (range) => {
         if (!range) return text;
         const start = lineOffsets[range.start.line] + range.start.character;
@@ -201,7 +207,7 @@ export const lsprag_def_tree = tool({
       },
     };
 
-    const symbols = buildFunctionSymbols(text, lineOffsets);
+    const symbols = buildFunctionSymbols(text, lineOffsets, languageId);
     const definitionsByName = new Map();
     for (const symbol of symbols) {
       definitionsByName.set(symbol.name, { uri: document.uri, range: symbol.selectionRange ?? symbol.range });
@@ -236,87 +242,105 @@ export const lsprag_def_tree = tool({
 `;
 fs.writeFileSync(toolFilePath, toolSource);
 
-const prompt = [
-  "Use the tool lsprag_def_tree exactly once.",
-  `Arguments: filePath="${fixturePath}", symbolName="foo", maxDepth=3.`,
-  "After the tool call, answer with exactly: DEF_TREE_DONE",
-].join(" ");
+function runScenario(options: {
+  fixturePath: string;
+  symbolName: string;
+  expectedNames: string[];
+}) {
+  const prompt = [
+    "Use the tool lsprag_def_tree exactly once.",
+    `Arguments: filePath="${options.fixturePath}", symbolName="${options.symbolName}", maxDepth=3.`,
+    "After the tool call, answer with exactly: DEF_TREE_DONE",
+  ].join(" ");
 
-const result = spawnSync(
-  "opencode",
-  [
-    "run",
-    "--agent",
-    "build",
-    "--format",
-    "json",
-    "--model",
-    "deepseek/deepseek-chat",
-    "--dir",
-    repoRoot,
-    prompt,
-  ],
-  {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      XDG_CONFIG_HOME: tempDir,
-      LSPRAG_SKILLS_ROOT: repoRoot,
-    },
-  }
-);
-
-if (result.status !== 0) {
-  const stderr = result.stderr || "";
-  if (stderr.includes("Session not found")) {
-    console.log("SKIP: opencode session not available");
-    process.exit(0);
-  }
-  console.error(stderr);
-  throw new Error(`opencode run failed with status ${result.status}`);
-}
-
-const lines = result.stdout
-  .split("\n")
-  .map((line) => line.trim())
-  .filter(Boolean);
-
-let toolOutput = "";
-const toolEvents: Array<{ tool: string; output: string }> = [];
-const parseErrors: string[] = [];
-for (const line of lines) {
-  try {
-    const event = JSON.parse(line);
-    if (
-      event.type === "tool_use" &&
-      String(event.part?.tool ?? "").includes("lsprag_def_tree")
-    ) {
-      const output = event.part?.state?.output;
-      toolOutput = typeof output === "string" ? output : JSON.stringify(output);
-      break;
+  const result = spawnSync(
+    "opencode",
+    [
+      "run",
+      "--agent",
+      "build",
+      "--format",
+      "json",
+      "--model",
+      "deepseek/deepseek-chat",
+      "--dir",
+      repoRoot,
+      prompt,
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        XDG_CONFIG_HOME: tempDir,
+        LSPRAG_SKILLS_ROOT: repoRoot,
+      },
     }
-    if (event.type === "tool_use") {
-      const output = event.part?.state?.output;
-      const outputString = typeof output === "string" ? output : JSON.stringify(output);
-      toolEvents.push({ tool: String(event.part?.tool ?? "unknown"), output: outputString });
+  );
+
+  if (result.status !== 0) {
+    const stderr = result.stderr || "";
+    if (stderr.includes("Session not found")) {
+      console.log("SKIP: opencode session not available");
+      process.exit(0);
     }
-  } catch {
-    parseErrors.push(line);
-    continue;
+    console.error(stderr);
+    throw new Error(`opencode run failed with status ${result.status}`);
   }
+
+  const lines = result.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let toolOutput = "";
+  const toolEvents: Array<{ tool: string; output: string }> = [];
+  const parseErrors: string[] = [];
+  for (const line of lines) {
+    try {
+      const event = JSON.parse(line);
+      if (
+        event.type === "tool_use" &&
+        String(event.part?.tool ?? "").includes("lsprag_def_tree")
+      ) {
+        const output = event.part?.state?.output;
+        toolOutput = typeof output === "string" ? output : JSON.stringify(output);
+        break;
+      }
+      if (event.type === "tool_use") {
+        const output = event.part?.state?.output;
+        const outputString = typeof output === "string" ? output : JSON.stringify(output);
+        toolEvents.push({ tool: String(event.part?.tool ?? "unknown"), output: outputString });
+      }
+    } catch {
+      parseErrors.push(line);
+      continue;
+    }
+  }
+
+  if (!toolOutput) {
+    const debug = [
+      "No lsprag_def_tree tool output found.",
+      `tool_use events: ${JSON.stringify(toolEvents, null, 2)}`,
+      `parse errors: ${parseErrors.slice(0, 5).join("\n")}`,
+    ].join("\n");
+    throw new Error(debug);
+  }
+
+  for (const name of options.expectedNames) {
+    assert(
+      toolOutput.includes(name),
+      `Expected tool output to include ${name}. Output:\n${toolOutput}`
+    );
+  }
+
+  console.log(`PASS: opencode integration smoke test (${path.basename(options.fixturePath)})`);
 }
 
-if (!toolOutput) {
-  const debug = [
-    "No lsprag_def_tree tool output found.",
-    `tool_use events: ${JSON.stringify(toolEvents, null, 2)}`,
-    `parse errors: ${parseErrors.slice(0, 5).join("\n")}`,
-  ].join("\n");
-  throw new Error(debug);
+const scenarios = [
+  { fixturePath: fixturePathTs, symbolName: "foo", expectedNames: ["foo", "bar", "baz"] },
+  { fixturePath: fixturePathGo, symbolName: "foo", expectedNames: ["foo", "bar", "baz"] },
+];
+
+for (const scenario of scenarios) {
+  runScenario(scenario);
 }
-
-assert(toolOutput.includes("foo"), `Expected tool output to include foo. Output:\n${toolOutput}`);
-assert(toolOutput.includes("bar"), `Expected tool output to include bar. Output:\n${toolOutput}`);
-assert(toolOutput.includes("baz"), `Expected tool output to include baz. Output:\n${toolOutput}`);
-
-console.log("PASS: opencode integration smoke test");
