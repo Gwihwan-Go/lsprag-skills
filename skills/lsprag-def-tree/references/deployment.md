@@ -2,89 +2,9 @@
 
 This module exposes a portable `buildDefTree` in `src/treeCore.ts`. It runs anywhere as long as you provide a `TokenProvider` that talks to your LSP client or MCP server.
 
-## Quick Start (One‑Command)
+## Prerequisites
 
-Clone the repo and install the skill for your agent in one command:
-
-```bash
-git clone --depth 1 https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills \
-  && mkdir -p ~/.codex/skills \
-  && ln -s ~/.lsprag-skills/skills/lsprag-def-tree ~/.codex/skills/lsprag-def-tree
-```
-
-Restart your agent and you should see the skill available.
-
-## Install the Skill
-
-Pick your agent and install the skill folder:
-
-1. Copy or symlink `skills/lsprag-def-tree/` into your agent’s skills directory.
-2. Restart your agent.
-
-Common install locations (community convention):
-
-- Claude Code: `~/.claude/skills/`
-- Gemini: `~/.gemini/skills/`
-- Codex: `~/.codex/skills/`
-- OpenCode: `~/.config/opencode/skill/`
-
-Example for Codex:
-
-```bash
-mkdir -p ~/.codex/skills
-ln -s /absolute/path/to/skills/lsprag-def-tree ~/.codex/skills/lsprag-def-tree
-```
-
-### One-Command Install (local repo)
-
-Run one of these from the repo root (adjust for your agent):
-
-```bash
-mkdir -p ~/.codex/skills && ln -s "$(pwd)/skills/lsprag-def-tree" ~/.codex/skills/lsprag-def-tree
-```
-
-```bash
-mkdir -p ~/.claude/skills && ln -s "$(pwd)/skills/lsprag-def-tree" ~/.claude/skills/lsprag-def-tree
-```
-
-```bash
-mkdir -p ~/.config/opencode/skill && ln -s "$(pwd)/skills/lsprag-def-tree" ~/.config/opencode/skill/lsprag-def-tree
-```
-
-### One-Command Install (GitHub repo)
-
-```bash
-git clone --depth 1 https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills && mkdir -p ~/.codex/skills && ln -s ~/.lsprag-skills/skills/lsprag-def-tree ~/.codex/skills/lsprag-def-tree
-```
-
-Update later with:
-
-```bash
-git -C ~/.lsprag-skills pull
-```
-
-## Language Server (No IDE Required)
-
-This skill needs an LSP server. If you don’t have an IDE, install and run one directly.
-
-### Quick Check (IDE or PATH)
-
-This script finds `gopls` if it already exists (PATH or VS Code Go extension). If it cannot find one, it installs `gopls` using `go install`.
-Run it from the repo root.
-
-```bash
-gopls_path="$(./scripts/ensure-gopls.sh)"
-"$gopls_path" serve
-```
-
-Go example:
-
-```bash
-go install golang.org/x/tools/gopls@latest
-gopls serve
-```
-
-Then connect your LSP client (or MCP bridge) to the running server.
+For repo-level install paths, agent setup, and LSP server notes, see the root `README.md`.
 
 ## Use from Code (Minimal Node Integration)
 

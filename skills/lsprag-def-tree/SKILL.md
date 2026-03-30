@@ -1,32 +1,42 @@
 ---
 name: lsprag-def-tree
-description: Use when exporting LSPRAG buildDefTree as a standalone module or wiring it to custom LSP/MCP clients.
+description: Build a definition tree for a target symbol using an LSP-backed provider.
 ---
 
 # LSPRAG Definition Tree (Portable)
 
-This skill packages the portable `buildDefTree` implementation so it can run outside VS Code.
+Build a lightweight definition tree for a symbol.
 
-## Install + Use
+## Use When
 
-- See `skills/lsprag-def-tree/references/deployment.md` for step-by-step install and usage.
+- You need a definition tree rooted at a target symbol.
+- You can provide LSP/MCP-backed token + definition data.
 
-## Core Module
+## Invocation
 
-- Portable API: `src/treeCore.ts` (plus token/definition/symbol helpers)
-- Exported function: `buildDefTree(document, symbol, provider, maxDepth)`
-- You must provide a `TokenProvider` that connects to your LSP client or MCP server.
+- Function: `buildDefTree(document, symbol, provider, maxDepth)`
+- Returns: definition tree
 
-## Quick Wiring Guide
+## Inputs Required
 
-1. Implement `TokenProvider` for your environment:
-   - `openDocument`
-   - `getDocumentSymbols`
-   - `getDefinitions`
-   - `getSemanticTokensRange` + `getSemanticTokensLegendRange`
-2. Call `buildDefTree` with your document and target symbol.
+- `document` (uri, languageId, getText)
+- `symbol` (target LSP symbol)
+- `provider` (`TokenProvider`)
+- `maxDepth` (optional number)
 
-## Deployment + Tests
+## Provider Methods
 
-- Deployment guide: `skills/lsprag-def-tree/references/deployment.md`
-- Testing plan: `skills/lsprag-def-tree/references/testing-plan.md`
+- `openDocument`
+- `getDocumentSymbols`
+- `getDefinitions`
+- `getSemanticTokensRange`
+- `getSemanticTokensLegendRange`
+
+## Output
+
+- Definition tree rooted at `symbol`
+
+## References
+
+- Repo setup: `README.md`
+- Deployment: `skills/lsprag-def-tree/references/deployment.md`

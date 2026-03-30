@@ -20,8 +20,20 @@ if (!commandExists("opencode")) {
   process.exit(0);
 }
 
-if (!process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY) {
-  console.log("SKIP: missing DEEPSEEK_API_KEY or OPENAI_API_KEY");
+const aidpModel = process.env.AIDP_MODEL || "gemini-2.5-pro";
+const aidpApiVersion = process.env.AIDP_API_VERSION || "2024-03-01-preview";
+const forceAidp = process.env.OPENCODE_USE_AIDP === "1";
+const testModel = process.env.OPENCODE_TEST_MODEL || (forceAidp ? `aidp/${aidpModel}` : "opencode/gpt-5-nano");
+const usesOpenCodeModel = testModel.startsWith("opencode/");
+const usesAidpModel = testModel.startsWith("aidp/");
+const useAidp = usesAidpModel;
+const requiresProviderKey = !usesOpenCodeModel && !usesAidpModel;
+if (usesAidpModel && (!process.env.AIDP_AK || !process.env.AIDP_ENDPOINT)) {
+  console.log("SKIP: missing AIDP_AK or AIDP_ENDPOINT for aidp/* model");
+  process.exit(0);
+}
+if (requiresProviderKey && !process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY) {
+  console.log("SKIP: missing DEEPSEEK_API_KEY or OPENAI_API_KEY for non-opencode model");
   process.exit(0);
 }
 
@@ -30,31 +42,83 @@ const configDir = path.join(tempDir, "opencode");
 const toolsDir = path.join(configDir, "tools");
 fs.mkdirSync(toolsDir, { recursive: true });
 
-const userConfig = path.join(os.homedir(), ".config", "opencode", "opencode.json");
-if (fs.existsSync(userConfig)) {
-  fs.copyFileSync(userConfig, path.join(configDir, "opencode.json"));
-} else {
+const opencodeConfigPath = path.join(configDir, "opencode.json");
+if (useAidp) {
   fs.writeFileSync(
-    path.join(configDir, "opencode.json"),
+    opencodeConfigPath,
     JSON.stringify(
       {
+        $schema: "https://opencode.ai/config.json",
         provider: {
-          openai: {
+          aidp: {
+            npm: "@ai-sdk/openai-compatible",
+            name: "AIDP",
             options: {
-              apiKey: "{env:OPENAI_API_KEY}",
-              baseURL: "https://api.openai.com/v1",
+              apiKey: "{env:AIDP_AK}",
+              baseURL: `{env:AIDP_ENDPOINT}/openai/deployments/${aidpModel}`,
+              headers: {
+                "X-TT-LOGID": "{env:AIDP_LOGID}",
+              },
+              queryParams: {
+                "api-version": aidpApiVersion,
+              },
+            },
+            models: {
+              [aidpModel]: {
+                name: aidpModel,
+                limit: {
+                  context: 1048576,
+                  output: 65536,
+                },
+              },
             },
           },
         },
+        model: `aidp/${aidpModel}`,
       },
       null,
       2
     )
   );
+} else {
+  const userConfig = path.join(os.homedir(), ".config", "opencode", "opencode.json");
+  if (fs.existsSync(userConfig)) {
+    fs.copyFileSync(userConfig, opencodeConfigPath);
+  } else {
+    fs.writeFileSync(
+      opencodeConfigPath,
+      JSON.stringify(
+        {
+          provider: {
+            openai: {
+              options: {
+                apiKey: "{env:OPENAI_API_KEY}",
+                baseURL: "https://api.openai.com/v1",
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+  }
 }
 
 const userNodeModules = path.join(os.homedir(), ".config", "opencode", "node_modules");
 const tempNodeModules = path.join(configDir, "node_modules");
+const pluginModulePath = path.join(userNodeModules, "@opencode-ai", "plugin");
+if (!fs.existsSync(pluginModulePath)) {
+  console.log("SKIP: missing ~/.config/opencode/node_modules/@opencode-ai/plugin");
+  process.exit(0);
+}
+if (useAidp) {
+  const aidpModulePath = path.join(userNodeModules, "@ai-sdk", "openai-compatible");
+  if (!fs.existsSync(aidpModulePath)) {
+    console.log("SKIP: missing ~/.config/opencode/node_modules/@ai-sdk/openai-compatible");
+    process.exit(0);
+  }
+}
 if (fs.existsSync(userNodeModules)) {
   try {
     fs.symlinkSync(userNodeModules, tempNodeModules, "dir");
@@ -262,7 +326,7 @@ function runScenario(options: {
       "--format",
       "json",
       "--model",
-      "deepseek/deepseek-chat",
+      testModel,
       "--dir",
       repoRoot,
       prompt,
@@ -295,9 +359,14 @@ function runScenario(options: {
   let toolOutput = "";
   const toolEvents: Array<{ tool: string; output: string }> = [];
   const parseErrors: string[] = [];
+  let runError = "";
   for (const line of lines) {
     try {
       const event = JSON.parse(line);
+      if (event.type === "error") {
+        runError = typeof event.error === "string" ? event.error : JSON.stringify(event.error);
+        continue;
+      }
       if (
         event.type === "tool_use" &&
         String(event.part?.tool ?? "").includes("lsprag_def_tree")
@@ -320,6 +389,7 @@ function runScenario(options: {
   if (!toolOutput) {
     const debug = [
       "No lsprag_def_tree tool output found.",
+      `run error: ${runError || "none"}`,
       `tool_use events: ${JSON.stringify(toolEvents, null, 2)}`,
       `parse errors: ${parseErrors.slice(0, 5).join("\n")}`,
     ].join("\n");

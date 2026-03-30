@@ -1,12 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "Bundler",
-    "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
     "types": ["node"]
   },
-  "include": ["src", "tests", "skills"]
+  "include": [
+    "skills",
+    "src",
+    "tests"
+  ]
 }
