@@ -6,6 +6,12 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 0
 fi
 
+if ! docker info >/dev/null 2>&1; then
+  echo "SKIP: docker daemon is not accessible in this environment."
+  echo "Run this test on a host with a running Docker daemon."
+  exit 0
+fi
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IMAGE_NAME="lsprag-skills-integration"
 
