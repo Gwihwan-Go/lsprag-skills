@@ -52,6 +52,16 @@ if (fs.existsSync(userConfig)) {
   );
 }
 
+const userNodeModules = path.join(os.homedir(), ".config", "opencode", "node_modules");
+const tempNodeModules = path.join(configDir, "node_modules");
+if (fs.existsSync(userNodeModules)) {
+  try {
+    fs.symlinkSync(userNodeModules, tempNodeModules, "dir");
+  } catch {
+    // best effort; opencode will fail if plugin isn't available
+  }
+}
+
 const toolFilePath = path.join(toolsDir, "lsprag_def_tree.ts");
 const toolSource = `
 import { tool } from "@opencode-ai/plugin";
@@ -272,21 +282,41 @@ const lines = result.stdout
   .filter(Boolean);
 
 let toolOutput = "";
+const toolEvents: Array<{ tool: string; output: string }> = [];
+const parseErrors: string[] = [];
 for (const line of lines) {
   try {
     const event = JSON.parse(line);
-    if (event.type === "tool_use" && event.part?.tool === "lsprag_def_tree") {
+    if (
+      event.type === "tool_use" &&
+      String(event.part?.tool ?? "").includes("lsprag_def_tree")
+    ) {
       const output = event.part?.state?.output;
       toolOutput = typeof output === "string" ? output : JSON.stringify(output);
       break;
     }
+    if (event.type === "tool_use") {
+      const output = event.part?.state?.output;
+      const outputString = typeof output === "string" ? output : JSON.stringify(output);
+      toolEvents.push({ tool: String(event.part?.tool ?? "unknown"), output: outputString });
+    }
   } catch {
+    parseErrors.push(line);
     continue;
   }
 }
 
-assert(toolOutput.includes("foo"), "Expected tool output to include foo");
-assert(toolOutput.includes("bar"), "Expected tool output to include bar");
-assert(toolOutput.includes("baz"), "Expected tool output to include baz");
+if (!toolOutput) {
+  const debug = [
+    "No lsprag_def_tree tool output found.",
+    `tool_use events: ${JSON.stringify(toolEvents, null, 2)}`,
+    `parse errors: ${parseErrors.slice(0, 5).join("\n")}`,
+  ].join("\n");
+  throw new Error(debug);
+}
+
+assert(toolOutput.includes("foo"), `Expected tool output to include foo. Output:\n${toolOutput}`);
+assert(toolOutput.includes("bar"), `Expected tool output to include bar. Output:\n${toolOutput}`);
+assert(toolOutput.includes("baz"), `Expected tool output to include baz. Output:\n${toolOutput}`);
 
 console.log("PASS: opencode integration smoke test");
