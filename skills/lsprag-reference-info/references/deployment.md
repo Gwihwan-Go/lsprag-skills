@@ -67,6 +67,16 @@ git -C ~/.lsprag-skills pull
 
 This skill needs an LSP server. If you don’t have an IDE, install and run one directly.
 
+### Quick Check (IDE or PATH)
+
+This script finds `gopls` if it already exists (PATH or VS Code Go extension). If it cannot find one, it installs `gopls` using `go install`.
+Run it from the repo root.
+
+```bash
+gopls_path="$(./scripts/ensure-gopls.sh)"
+"$gopls_path" serve
+```
+
 Go example:
 
 ```bash
