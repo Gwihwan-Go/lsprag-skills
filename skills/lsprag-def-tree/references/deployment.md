@@ -2,6 +2,18 @@
 
 This module exposes a portable `buildDefTree` in `src/treeCore.ts`. It runs anywhere as long as you provide a `TokenProvider` that talks to your LSP client or MCP server.
 
+## Quick Start (One‑Command)
+
+Clone the repo and install the skill for your agent in one command:
+
+```bash
+git clone --depth 1 https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills \
+  && mkdir -p ~/.codex/skills \
+  && ln -s ~/.lsprag-skills/skills/lsprag-def-tree ~/.codex/skills/lsprag-def-tree
+```
+
+Restart your agent and you should see the skill available.
+
 ## Install the Skill
 
 Pick your agent and install the skill folder:
@@ -50,6 +62,19 @@ Update later with:
 ```bash
 git -C ~/.lsprag-skills pull
 ```
+
+## Language Server (No IDE Required)
+
+This skill needs an LSP server. If you don’t have an IDE, install and run one directly.
+
+Go example:
+
+```bash
+go install golang.org/x/tools/gopls@latest
+gopls serve
+```
+
+Then connect your LSP client (or MCP bridge) to the running server.
 
 ## Use from Code (Minimal Node Integration)
 
