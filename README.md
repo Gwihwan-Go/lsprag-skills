@@ -12,3 +12,16 @@ Minimal, portable skill implementations extracted from LSPRAG.
 ## Install (local clone)
 
 See `skills/lsprag-reference-info/references/deployment.md` for one‑command install options.
+
+## Tests
+
+```bash
+npm install
+npm run test:core
+```
+
+Optional OpenCode integration test:
+
+```bash
+npm run test:opencode
+```

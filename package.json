@@ -1,0 +1,14 @@
+{
+  "name": "lsprag-skills",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:core": "tsx tests/def-tree.core.test.ts",
+    "test:opencode": "tsx tests/opencode/def-tree.opencode.test.ts",
+    "test": "npm run test:core"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}
