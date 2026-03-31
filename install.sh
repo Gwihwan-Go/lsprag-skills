@@ -86,6 +86,84 @@ else
 fi
 if [ "$found_any" -eq 0 ]; then
   warn "No LSP servers detected. Regex provider will be used by default."
+  warn "To install LSP servers automatically: LSPRAG_INSTALL_LSP=1 bash $REPO_ROOT/install.sh"
+fi
+
+# ── 4b. Optional LSP install ──────────────────────────────────────────────────
+if [ "${LSPRAG_INSTALL_LSP:-}" = "1" ]; then
+  echo ""
+  echo "==> Installing LSP servers (optional)..."
+  mkdir -p "$HOME/.local/bin"
+
+  # Go (gopls)
+  if ! command -v gopls &>/dev/null; then
+    if command -v apt-get &>/dev/null; then
+      if [ "$(id -u)" -eq 0 ]; then
+        apt-get update -y >/dev/null 2>&1 || true
+        if apt-get install -y gopls >/dev/null 2>&1; then
+          ok "Installed gopls (apt)"
+        else
+          warn "Failed to install gopls via apt"
+        fi
+      elif command -v sudo &>/dev/null; then
+        sudo apt-get update -y >/dev/null 2>&1 || true
+        if sudo apt-get install -y gopls >/dev/null 2>&1; then
+          ok "Installed gopls (apt)"
+        else
+          warn "Failed to install gopls via apt"
+        fi
+      else
+        warn "gopls not installed (need sudo/root or Go toolchain)"
+      fi
+    fi
+
+    if ! command -v gopls &>/dev/null && command -v go &>/dev/null; then
+      if GOBIN="$HOME/.local/bin" GOPATH="$HOME/.local/go" \
+        go install golang.org/x/tools/gopls@latest >/dev/null 2>&1; then
+        ok "Installed gopls (go install)"
+      else
+        warn "Failed to install gopls via go install"
+      fi
+    fi
+  else
+    ok "gopls already installed"
+  fi
+
+  # TypeScript (tsserver)
+  if ! command -v tsserver &>/dev/null; then
+    if command -v npm &>/dev/null; then
+      if npm install -g typescript --prefix "$HOME/.local" --silent; then
+        ok "Installed tsserver (npm)"
+      else
+        warn "Failed to install tsserver via npm"
+      fi
+    else
+      warn "npm not found; cannot install tsserver"
+    fi
+  else
+    ok "tsserver already installed"
+  fi
+
+  # Python (pylsp)
+  if ! command -v pylsp &>/dev/null; then
+    if command -v python3 &>/dev/null; then
+      VENV="$HOME/.local/lsprag-pylsp-venv"
+      if python3 -m venv "$VENV" >/dev/null 2>&1; then
+        if "$VENV/bin/pip" install --quiet python-lsp-server; then
+          ln -sf "$VENV/bin/pylsp" "$HOME/.local/bin/pylsp"
+          ok "Installed pylsp (venv)"
+        else
+          warn "Failed to install pylsp in venv"
+        fi
+      else
+        warn "Failed to create Python venv for pylsp"
+      fi
+    else
+      warn "python3 not found; cannot install pylsp"
+    fi
+  else
+    ok "pylsp already installed"
+  fi
 fi
 
 # ── 5. Install lsprag binary ──────────────────────────────────────────────────

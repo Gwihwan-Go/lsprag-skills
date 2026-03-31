@@ -29,6 +29,30 @@ lsprag --help
 
 **IF THE CLI IS NOT WORKING, DO NOT PROCEED. Ask the user to run the installer first.**
 
+Optional: install LSP servers (recommended for cross-file accuracy):
+
+```bash
+LSPRAG_INSTALL_LSP=1 bash "$LSPRAG_SKILLS_ROOT/install.sh"
+```
+
+Manual install:
+
+```bash
+# Go (gopls)
+sudo apt-get update
+sudo apt-get install -y gopls
+# or
+GOBIN="$HOME/.local/bin" GOPATH="$HOME/.local/go" go install golang.org/x/tools/gopls@latest
+
+# TypeScript (tsserver)
+npm install -g typescript --prefix "$HOME/.local"
+
+# Python (pylsp)
+python3 -m venv ~/.local/lsprag-pylsp-venv
+~/.local/lsprag-pylsp-venv/bin/pip install python-lsp-server
+ln -sf ~/.local/lsprag-pylsp-venv/bin/pylsp ~/.local/bin/pylsp
+```
+
 ## Overview
 
 `lsprag` is a code analysis CLI. It analyzes source files to map function call trees and dependencies.

@@ -29,6 +29,14 @@ bash ~/.lsprag-skills/install.sh
 
 The installer: runs `npm install`, sets env vars, symlinks `lsprag` to `~/.local/bin/lsprag`, configures Claude Code, and sets up OpenCode if detected.
 
+Optional: install LSP servers automatically (Go/TypeScript/Python):
+
+```bash
+LSPRAG_INSTALL_LSP=1 bash ~/.lsprag-skills/install.sh
+```
+
+If you already ran the installer, rerun it with `LSPRAG_INSTALL_LSP=1`.
+
 ### Option B: Manual
 
 ```bash
@@ -127,22 +135,31 @@ lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest
 
 ## LSP Server Setup (for cross-file analysis)
 
-`lsprag def-tree` works without an LSP server (regex mode). For cross-file accuracy, set `LSPRAG_LSP_PROVIDER` to a provider module.
+`lsprag def-tree` works without an LSP server (regex mode). For cross-file accuracy, install LSP servers and set an LSP provider module.
 
-**Go**:
+**Go (gopls)**:
 ```bash
-go install golang.org/x/tools/gopls@latest
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y gopls
+
+# or via Go toolchain
+GOBIN="$HOME/.local/bin" GOPATH="$HOME/.local/go" go install golang.org/x/tools/gopls@latest
 ```
 
-**TypeScript**:
+**TypeScript (tsserver)**:
 ```bash
-npm install -g typescript  # tsserver is included
+npm install -g typescript --prefix "$HOME/.local"
 ```
 
-**Python**:
+**Python (pylsp)**:
 ```bash
-pip install python-lsp-server
+python3 -m venv ~/.local/lsprag-pylsp-venv
+~/.local/lsprag-pylsp-venv/bin/pip install python-lsp-server
+ln -sf ~/.local/lsprag-pylsp-venv/bin/pylsp ~/.local/bin/pylsp
 ```
+
+If you install to `~/.local/bin`, make sure it is on your `PATH`.
 
 ## Repository Layout
 
