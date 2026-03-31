@@ -1,3 +1,5 @@
+import { getReferenceProvider } from './providerRegistry';
+
 export interface ReferencePosition {
     line: number;
     character: number;
@@ -223,26 +225,34 @@ async function processReferences(
 export async function getReferenceInfo(
     document: ReferenceDocument,
     range: ReferenceRange,
-    provider: ReferenceProvider,
+    provider?: ReferenceProvider | ReferenceInfoOptions,
     options: ReferenceInfoOptions = {}
 ): Promise<string> {
+    let resolvedProvider: ReferenceProvider | undefined;
+    let resolvedOptions = options;
+    if (provider && typeof (provider as ReferenceProvider).getReferences === 'function') {
+        resolvedProvider = provider as ReferenceProvider;
+    } else if (provider) {
+        resolvedOptions = provider as ReferenceInfoOptions;
+    }
+    const activeProvider = await getReferenceProvider(resolvedProvider);
     const targetToken = document.getText(range);
     const start = range.start;
     const end = range.end;
-    const refWindow = options.refWindow ?? 60;
-    const skipTestCode = options.skipTestCode ?? false;
+    const refWindow = resolvedOptions.refWindow ?? 60;
+    const skipTestCode = resolvedOptions.skipTestCode ?? false;
 
-    provider.log?.(
+    activeProvider.log?.(
         `[getReferenceInfo] Starting reference search for token "${targetToken}" at position ${start.line}:${start.character}`
     );
 
-    const references = await provider.getReferences(document, start);
+    const references = await activeProvider.getReferences(document, start);
     if (!references || references.length === 0) {
-        provider.log?.('[getReferenceInfo] No references found');
+        activeProvider.log?.('[getReferenceInfo] No references found');
         return '';
     }
 
-    const referenceCodes = await processReferences(provider, document, references, {
+    const referenceCodes = await processReferences(activeProvider, document, references, {
         targetToken,
         start,
         end,
@@ -250,6 +260,6 @@ export async function getReferenceInfo(
         skipTestCode
     });
 
-    provider.log?.(`[getReferenceInfo] Processed ${referenceCodes.length} valid reference codes`);
+    activeProvider.log?.(`[getReferenceInfo] Processed ${referenceCodes.length} valid reference codes`);
     return referenceCodes.join('\n');
 }

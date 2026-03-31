@@ -1,0 +1,20 @@
+{
+  "name": "lsprag-skills",
+  "owner": {
+    "name": "Gwihwan Go",
+    "url": "https://github.com/Gwihwan-Go"
+  },
+  "metadata": {
+    "description": "LSP-based code analysis skills for AI agents — definition trees, reference lookup, call chain analysis. Works offline with regex, scales up with real LSP servers.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "lsprag",
+      "description": "Semantic code analysis via LSP: build definition trees, find callers, analyze call chains. No VS Code required. Works offline (regex) or with real LSP servers (gopls, tsserver, pylsp).",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/lsprag"]
+    }
+  ]
+}

@@ -44,19 +44,85 @@ else
   warn "  export LSPRAG_SKILLS_ROOT=\"$REPO_ROOT\""
 fi
 
-# ── 3. Verify CLI script works ────────────────────────────────────────────────
+# ── 3. LSPRAG_LSP_PROVIDER env var ────────────────────────────────────────────
+PROVIDER_PATH="$REPO_ROOT/providers/regex-provider.mjs"
+export LSPRAG_LSP_PROVIDER="$PROVIDER_PATH"
+
+if [ -n "$SHELL_RC" ]; then
+  if ! grep -q "LSPRAG_LSP_PROVIDER" "$SHELL_RC"; then
+    echo "" >> "$SHELL_RC"
+    echo "# lsprag-skills provider" >> "$SHELL_RC"
+    echo "export LSPRAG_LSP_PROVIDER=\"$PROVIDER_PATH\"" >> "$SHELL_RC"
+    ok "Added LSPRAG_LSP_PROVIDER to $SHELL_RC"
+  else
+    ok "LSPRAG_LSP_PROVIDER already in $SHELL_RC"
+  fi
+else
+  warn "No shell rc file found. Set LSPRAG_LSP_PROVIDER manually:"
+  warn "  export LSPRAG_LSP_PROVIDER=\"$PROVIDER_PATH\""
+fi
+
+# ── 4. Check LSP servers ──────────────────────────────────────────────────────
 echo ""
-echo "==> Testing CLI script..."
-CLI_OUTPUT=$(npx tsx "$REPO_ROOT/scripts/def-tree-cli.ts" \
+echo "==> Checking LSP servers..."
+found_any=0
+if command -v gopls &>/dev/null; then
+  ok "gopls found: $(command -v gopls)"
+  found_any=1
+else
+  warn "gopls not found (Go LSP)"
+fi
+if command -v tsserver &>/dev/null; then
+  ok "tsserver found: $(command -v tsserver)"
+  found_any=1
+else
+  warn "tsserver not found (TypeScript LSP)"
+fi
+if command -v pylsp &>/dev/null; then
+  ok "pylsp found: $(command -v pylsp)"
+  found_any=1
+else
+  warn "pylsp not found (Python LSP)"
+fi
+if [ "$found_any" -eq 0 ]; then
+  warn "No LSP servers detected. Regex provider will be used by default."
+fi
+
+# ── 5. Install lsprag binary ──────────────────────────────────────────────────
+echo ""
+echo "==> Installing lsprag CLI..."
+LSPRAG_BIN="$HOME/.local/bin/lsprag"
+chmod +x "$REPO_ROOT/scripts/lsprag"
+mkdir -p "$(dirname "$LSPRAG_BIN")"
+ln -sf "$REPO_ROOT/scripts/lsprag" "$LSPRAG_BIN"
+ok "Installed lsprag → $LSPRAG_BIN"
+
+# Ensure ~/.local/bin is in PATH for this session
+export PATH="$HOME/.local/bin:$PATH"
+
+# Add to shell rc if missing
+if [ -n "$SHELL_RC" ]; then
+  if ! grep -q 'local/bin' "$SHELL_RC"; then
+    echo "" >> "$SHELL_RC"
+    echo '# lsprag-skills: add ~/.local/bin to PATH' >> "$SHELL_RC"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
+    ok "Added ~/.local/bin to PATH in $SHELL_RC"
+  fi
+fi
+
+# ── 6. Verify lsprag works ────────────────────────────────────────────────────
+echo ""
+echo "==> Testing lsprag CLI..."
+CLI_OUTPUT=$(LSPRAG_SKILLS_ROOT="$REPO_ROOT" "$REPO_ROOT/scripts/lsprag" def-tree \
   --file "$REPO_ROOT/tests/fixtures/def-tree-sample.ts" \
   --symbol foo 2>&1)
 if echo "$CLI_OUTPUT" | grep -q "bar"; then
-  ok "CLI script works (def-tree-cli.ts)"
+  ok "lsprag def-tree works"
 else
-  err "CLI script test failed. Output: $CLI_OUTPUT"
+  err "lsprag test failed. Output: $CLI_OUTPUT"
 fi
 
-# ── 4. Claude Code ────────────────────────────────────────────────────────────
+# ── 7. Claude Code ────────────────────────────────────────────────────────────
 if command -v claude &>/dev/null; then
   echo ""
   echo "==> Setting up Claude Code..."
@@ -82,14 +148,15 @@ if command -v claude &>/dev/null; then
 
   ok "Claude Code ready. Start a new shell, then run:"
   ok "  claude"
-  ok "  /lsprag-def-tree --file path/to/file.ts --symbol myFn"
+  ok "  /lsprag --file path/to/file.ts --symbol myFn"
+  ok "  (or just describe your task and Claude will invoke lsprag automatically)"
 else
   warn "Claude Code not found. To install: https://claude.ai/code"
   warn "After installing, add to $SHELL_RC:"
   warn "  alias claude='claude --plugin-dir \"$REPO_ROOT\"'"
 fi
 
-# ── 5. OpenCode ────────────────────────────────────────────────────────────────
+# ── 8. OpenCode ────────────────────────────────────────────────────────────────
 OPENCODE_TOOLS="$HOME/.config/opencode/tools"
 if command -v opencode &>/dev/null || [ -d "$HOME/.config/opencode" ]; then
   echo ""
@@ -117,22 +184,23 @@ else
   warn "  cp $REPO_ROOT/tools/lsprag_def_tree.ts ~/.config/opencode/tools/"
 fi
 
-# ── 6. Summary ────────────────────────────────────────────────────────────────
+# ── 9. Summary ────────────────────────────────────────────────────────────────
 echo ""
 echo "============================================================"
 echo "Installation complete!"
 echo ""
 echo "IMPORTANT: Open a new terminal (or run: source $SHELL_RC)"
-echo "This activates the LSPRAG_SKILLS_ROOT env var."
+echo "This activates LSPRAG_SKILLS_ROOT, LSPRAG_LSP_PROVIDER, and PATH."
 echo ""
-echo "Quick test (run after opening a new terminal):"
-echo "  npx tsx \$LSPRAG_SKILLS_ROOT/scripts/def-tree-cli.ts \\"
+echo "Quick test (after opening a new terminal):"
+echo "  lsprag def-tree \\"
 echo "    --file \$LSPRAG_SKILLS_ROOT/tests/fixtures/def-tree-sample.ts \\"
 echo "    --symbol foo"
 echo ""
 if command -v claude &>/dev/null; then
   echo "In Claude Code (after opening a new terminal):"
-  echo "  /lsprag-def-tree --file path/to/file.ts --symbol myFn"
+  echo "  claude"
+  echo "  /lsprag --file path/to/file.ts --symbol myFn"
   echo ""
 fi
 if command -v opencode &>/dev/null; then
@@ -140,5 +208,6 @@ if command -v opencode &>/dev/null; then
   echo "  Use lsprag_def_tree tool with filePath and symbolName args"
   echo ""
 fi
-echo "Run all tests: cd $REPO_ROOT && npm test"
+echo "Verify setup anytime: bash $REPO_ROOT/scripts/update.sh"
+echo "Run all tests:        cd $REPO_ROOT && npm test"
 echo "============================================================"

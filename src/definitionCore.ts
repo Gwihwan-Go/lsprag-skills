@@ -1,4 +1,5 @@
 import { CoreDecodedToken, LspDocument, LspLocation, LspPosition, LspRange, LspSymbol, comparePosition } from './coreTypes';
+import { getDefinitionProvider } from './providerRegistry';
 
 export interface DefinitionProvider {
     getDefinitions(document: LspDocument, position: LspPosition): Promise<LspLocation[]>;
@@ -57,12 +58,20 @@ export async function classifyTokenByUri(
 export async function retrieveDefs(
     document: LspDocument,
     decodedTokens: CoreDecodedToken[],
-    provider: DefinitionProvider,
+    provider?: DefinitionProvider | boolean,
     skipDefinition: boolean = false
 ): Promise<CoreDecodedToken[]> {
+    let resolvedProvider: DefinitionProvider | undefined;
+    let resolvedSkip = skipDefinition;
+    if (typeof provider === 'boolean') {
+        resolvedSkip = provider;
+    } else if (provider) {
+        resolvedProvider = provider;
+    }
+    const activeProvider = await getDefinitionProvider(resolvedProvider);
     const defTokens: CoreDecodedToken[] = [];
     for (const token of decodedTokens) {
-        const defToken = await retrieveDef(document, token, provider, skipDefinition);
+        const defToken = await retrieveDef(document, token, activeProvider, resolvedSkip);
         defTokens.push(defToken);
     }
     return defTokens;
@@ -71,17 +80,25 @@ export async function retrieveDefs(
 export async function retrieveDef(
     document: LspDocument,
     decodedToken: CoreDecodedToken,
-    provider: DefinitionProvider,
+    provider?: DefinitionProvider | boolean,
     skipDefinition: boolean = false
 ): Promise<CoreDecodedToken> {
+    let resolvedProvider: DefinitionProvider | undefined;
+    let resolvedSkip = skipDefinition;
+    if (typeof provider === 'boolean') {
+        resolvedSkip = provider;
+    } else if (provider) {
+        resolvedProvider = provider;
+    }
+    const activeProvider = await getDefinitionProvider(resolvedProvider);
     const startPos: LspPosition = { line: decodedToken.line, character: decodedToken.startChar };
     const endPos: LspPosition = { line: decodedToken.line, character: decodedToken.startChar + decodedToken.length };
     const range: LspRange = { start: startPos, end: endPos };
     decodedToken.word = document.getText(range);
-    if (skipDefinition) {
+    if (resolvedSkip) {
         decodedToken.definition = [];
     } else {
-        decodedToken.definition = await provider.getDefinitions(document, startPos);
+        decodedToken.definition = await activeProvider.getDefinitions(document, startPos);
     }
     return decodedToken;
 }

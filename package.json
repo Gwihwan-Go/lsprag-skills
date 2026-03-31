@@ -2,6 +2,9 @@
   "name": "lsprag-skills",
   "private": true,
   "type": "module",
+  "bin": {
+    "lsprag": "./scripts/lsprag"
+  },
   "scripts": {
     "test:core": "tsx tests/def-tree.core.test.ts",
     "test:core-go": "tsx tests/def-tree.core-go.test.ts",

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# lsprag — LSP-based code analysis CLI for AI agents
+#
+# Install: bash ~/.lsprag-skills/install.sh
+# Or manually symlink: ln -sf ~/.lsprag-skills/scripts/lsprag ~/.local/bin/lsprag
+#
+# The LSPRAG_SKILLS_ROOT env var is used to locate core modules.
+# Falls back to the directory containing this script's real location.
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+ROOT="${LSPRAG_SKILLS_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+
+CMD="${1:-}"
+shift 2>/dev/null || true
+
+case "$CMD" in
+  def-tree|deftree|tree)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/def-tree-cli.ts" "$@"
+    ;;
+  version|--version|-V)
+    echo "lsprag 0.1.0 (root: $ROOT)"
+    ;;
+  help|--help|-h|"")
+    cat <<'HELP'
+lsprag — LSP-based code analysis for AI agents
+
+Usage:
+  lsprag <command> [options]
+
+Commands:
+  def-tree    Build a definition tree showing what a function calls
+
+Options:
+  -h, --help      Show this help
+  --version       Show version
+
+Run 'lsprag <command> --help' for command-specific options.
+
+Examples:
+  lsprag def-tree --file src/server.ts --symbol handleRequest
+  lsprag def-tree --file main.go --symbol ProcessRequest --depth 4
+  lsprag def-tree --file "$(realpath src/foo.ts)" --symbol myFn --depth 5
+HELP
+    ;;
+  *)
+    echo "lsprag: unknown command '$CMD'" >&2
+    echo "Run 'lsprag help' for usage." >&2
+    exit 1
+    ;;
+esac

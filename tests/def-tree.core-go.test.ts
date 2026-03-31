@@ -13,6 +13,7 @@ import {
   LspSymbol,
 } from "../src/coreTypes.js";
 import { TokenProvider } from "../src/tokenCore.js";
+import { registerProviders } from "../src/providerRegistry.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturePath = path.join(__dirname, "fixtures", "def-tree-sample.go");
@@ -167,11 +168,12 @@ const provider: TokenProvider = {
   getSemanticTokensLegendRange: async () => null,
   log: () => undefined,
 };
+registerProviders({ token: provider });
 
 const fooSymbol = symbols.find((symbol) => symbol.name === "foo");
 assert(fooSymbol, "Expected to find foo symbol");
 
-const tree = await buildDefTree(document, fooSymbol!, provider, 3);
+const tree = await buildDefTree(document, fooSymbol!, 3);
 assert.equal(tree.name, "foo");
 assert.equal(tree.children.length, 1);
 assert.equal(tree.children[0].name, "bar");

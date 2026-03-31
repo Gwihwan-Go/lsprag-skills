@@ -1,6 +1,0 @@
-interface:
-  display_name: "LSPRAG Retrieve Definitions"
-  short_description: "Resolve where each token in a symbol is defined"
-  default_prompt: "Use $lsprag-retrieve-defs to batch-resolve definitions for decoded tokens. Run: tsx $LSPRAG_SKILLS_ROOT/scripts/def-tree-cli.ts --file <path> --symbol <name>"
-policy:
-  allow_implicit_invocation: true

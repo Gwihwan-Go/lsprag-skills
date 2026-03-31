@@ -1,6 +1,7 @@
 import { CoreDecodedToken, LspDocument, LspRange, LspSymbol } from './coreTypes';
 import { retrieveDefs } from './definitionCore';
 import { extractRangeTokensFromAllTokens, processTokenDefinitions, TokenProvider } from './tokenCore';
+import { getTokenProvider } from './providerRegistry';
 
 export interface DefinitionTreeNode {
     name: string;
@@ -19,9 +20,17 @@ export interface DefinitionTreeNode {
 export async function buildDefTree(
     document: LspDocument,
     symbol: LspSymbol,
-    provider: TokenProvider,
+    provider?: TokenProvider | number,
     maxDepth: number = 3
 ): Promise<DefinitionTreeNode> {
+    let resolvedProvider: TokenProvider | undefined;
+    let resolvedDepth = maxDepth;
+    if (typeof provider === 'number') {
+        resolvedDepth = provider;
+    } else if (provider) {
+        resolvedProvider = provider;
+    }
+    const activeProvider = await getTokenProvider(resolvedProvider);
     const visited = new Set<string>();
     const root: DefinitionTreeNode = {
         name: symbol.name,
@@ -51,17 +60,17 @@ export async function buildDefTree(
     while (queue.length > 0) {
         const { doc: currDoc, sym: currSym, depth, node, range: currRange } = queue.shift()!;
 
-        if (depth >= maxDepth) {
-            provider.log?.(`#### Depth limit reached at ${currDoc.uri} :: ${currSym.name} (depth=${depth})`);
+        if (depth >= resolvedDepth) {
+            activeProvider.log?.(`#### Depth limit reached at ${currDoc.uri} :: ${currSym.name} (depth=${depth})`);
             node.truncated = true;
             continue;
         }
 
-        provider.log?.(`#### Visiting: ${currDoc.uri} :: ${currSym.name}`);
+        activeProvider.log?.(`#### Visiting: ${currDoc.uri} :: ${currSym.name}`);
 
-        const tokensofSymbols = await extractRangeTokensFromAllTokens(provider, currDoc, currRange.start, currRange.end);
-        const childDefTokens: CoreDecodedToken[] = await retrieveDefs(currDoc, tokensofSymbols, provider, false);
-        const uriTokenMap = await processTokenDefinitions(currDoc, childDefTokens, provider, currSym);
+        const tokensofSymbols = await extractRangeTokensFromAllTokens(activeProvider, currDoc, currRange.start, currRange.end);
+        const childDefTokens: CoreDecodedToken[] = await retrieveDefs(currDoc, tokensofSymbols, activeProvider, false);
+        const uriTokenMap = await processTokenDefinitions(currDoc, childDefTokens, activeProvider, currSym);
 
         for (const [uri, childTokens] of uriTokenMap.entries()) {
             for (const childToken of childTokens) {
@@ -93,7 +102,7 @@ export async function buildDefTree(
         }
     }
 
-    provider.log?.(`#### Built tree for: ${symbol.name}`);
+    activeProvider.log?.(`#### Built tree for: ${symbol.name}`);
     return root;
 }
 

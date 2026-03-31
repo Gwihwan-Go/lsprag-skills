@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { retrieveDefs, DefinitionProvider } from "../src/definitionCore.js";
+import { registerProviders } from "../src/providerRegistry.js";
 import {
   CoreDecodedToken,
   LspDocument,
@@ -86,6 +87,7 @@ const provider: DefinitionProvider = {
     return location ? [location] : [];
   },
 };
+registerProviders({ definition: provider });
 
 function makeToken(): CoreDecodedToken {
   return {
@@ -100,12 +102,12 @@ function makeToken(): CoreDecodedToken {
   };
 }
 
-const withDefinitions = await retrieveDefs(document, [makeToken()], provider);
+const withDefinitions = await retrieveDefs(document, [makeToken()]);
 assert.equal(withDefinitions[0].word, "bar");
 assert.equal(withDefinitions[0].definition.length, 1);
 assert.equal(withDefinitions[0].definition[0].range.start.line, 3);
 
-const skippedDefinitions = await retrieveDefs(document, [makeToken()], provider, true);
+const skippedDefinitions = await retrieveDefs(document, [makeToken()], true);
 assert.equal(skippedDefinitions[0].definition.length, 0);
 
 console.log("PASS: retrieveDefs core smoke test");

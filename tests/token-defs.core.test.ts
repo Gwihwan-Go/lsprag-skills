@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { getDecodedTokensFromSymbolWithDefs } from "../src/tokenDefsCore.js";
 import { TokenProvider } from "../src/tokenCore.js";
+import { registerProviders } from "../src/providerRegistry.js";
 import {
   CoreDecodedToken,
   LspDocument,
@@ -123,8 +124,9 @@ const provider: TokenProvider = {
     return location ? [location] : [];
   },
 };
+registerProviders({ token: provider });
 
-const tokensWithDefs: CoreDecodedToken[] = await getDecodedTokensFromSymbolWithDefs(document, fooSymbol, provider);
+const tokensWithDefs: CoreDecodedToken[] = await getDecodedTokensFromSymbolWithDefs(document, fooSymbol);
 assert.equal(tokensWithDefs.length, 1);
 assert.equal(tokensWithDefs[0].word, "bar");
 assert.equal(tokensWithDefs[0].definition.length, 1);
