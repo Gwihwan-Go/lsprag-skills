@@ -23,6 +23,9 @@ case "$CMD" in
   token-defs|tokendefs|tokens)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/token-defs-cli.ts" "$@"
     ;;
+  deep-think|deepthink|think)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/deep-think-cli.ts" "$@"
+    ;;
   version|--version|-V)
     echo "lsprag 0.1.0 (root: $ROOT)"
     ;;
@@ -37,6 +40,7 @@ Commands:
   def-tree      Build a call tree: what does a function call, recursively?
   retrieve-def  Get the full source of a symbol's definition
   token-defs    List tokens inside a symbol with their definition locations
+  deep-think    BFS expansion: retrieve source + deps for a symbol and all dependencies
 
 Options:
   -h, --help      Show this help
@@ -49,6 +53,7 @@ Examples:
   lsprag retrieve-def --file src/server.ts   --symbol handleRequest
   lsprag retrieve-def --file src/server.ts   --symbol parseBody --location 42:15
   lsprag token-defs   --file src/server.ts   --symbol handleRequest
+  lsprag deep-think   --file src/server.ts   --symbol handleRequest --depth 2
   lsprag def-tree     --file "$(realpath src/foo.ts)" --symbol myFn --depth 5
 HELP
     ;;

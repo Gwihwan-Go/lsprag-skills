@@ -15,6 +15,13 @@
       "source": "./",
       "strict": false,
       "skills": ["./skills/lsprag"]
+    },
+    {
+      "name": "lsprag-deep-think",
+      "description": "High-effort BFS code understanding: recursively retrieve source and dependencies for a symbol and all its transitive dependencies. Use before writing tests or refactoring complex functions.",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/lsprag-deep-think"]
     }
   ]
 }

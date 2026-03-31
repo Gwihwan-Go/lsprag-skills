@@ -12,6 +12,7 @@ const repoRoot = path.resolve(__dirname, "..");
 const cliScript         = path.join(repoRoot, "scripts", "def-tree-cli.ts");
 const retrieveDefScript = path.join(repoRoot, "scripts", "retrieve-def-cli.ts");
 const tokenDefsScript   = path.join(repoRoot, "scripts", "token-defs-cli.ts");
+const deepThinkScript   = path.join(repoRoot, "scripts", "deep-think-cli.ts");
 const fixtureTs = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.ts");
 const fixtureGo = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.go");
 
@@ -27,13 +28,14 @@ function runCli(file: string, symbol: string, depth = 3): string {
   return result.stdout;
 }
 
-// TypeScript fixture: foo -> bar -> baz
+// TypeScript fixture: foo -> bar -> (qux, baz)
 {
   const output = runCli(fixtureTs, "foo");
   assert(output.includes("foo"), `Expected "foo" in output:\n${output}`);
   assert(output.includes("bar"), `Expected "bar" in output:\n${output}`);
   assert(output.includes("baz"), `Expected "baz" in output:\n${output}`);
-  console.log("PASS: CLI TypeScript fixture (foo -> bar -> baz)");
+  assert(output.includes("qux"), `Expected "qux" in output:\n${output}`);
+  console.log("PASS: CLI TypeScript fixture (foo -> bar -> qux, baz)");
 }
 
 // Go fixture: same structure
@@ -79,14 +81,15 @@ function runCli(file: string, symbol: string, depth = 3): string {
   assert(result.stdout.includes("# bar"), `Expected "# bar" header:\n${result.stdout}`);
   assert(result.stdout.includes("function bar"), `Expected function body:\n${result.stdout}`);
   assert(result.stdout.includes("baz"), `Expected baz call in body:\n${result.stdout}`);
+  assert(result.stdout.includes("qux"), `Expected qux call in body:\n${result.stdout}`);
   console.log("PASS: retrieve-def by name (TS)");
 }
 
-// ── retrieve-def: by location (bar call on line 2 col 10) ────────────────────
+// ── retrieve-def: by location (bar call on line 5 col 10) ────────────────────
 {
   const result = spawnSync(
     "npx",
-    ["tsx", retrieveDefScript, "--file", fixtureTs, "--symbol", "bar", "--location", "2:10"],
+    ["tsx", retrieveDefScript, "--file", fixtureTs, "--symbol", "bar", "--location", "5:10"],
     { encoding: "utf8", cwd: repoRoot }
   );
   assert.equal(result.status, 0, `retrieve-def --location exited ${result.status}:\n${result.stderr}`);
@@ -131,6 +134,76 @@ function runCli(file: string, symbol: string, depth = 3): string {
   assert(result.stdout.includes("Tokens in 'foo'"), `Expected header:\n${result.stdout}`);
   assert(result.stdout.includes("bar"), `Expected bar token:\n${result.stdout}`);
   console.log("PASS: token-defs (Go)");
+}
+
+// ── deep-think: TS fixture depth=1 ───────────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTs, "--symbol", "foo", "--depth", "1"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Level 0: foo"), `Expected Level 0 foo:\n${result.stdout}`);
+  assert(result.stdout.includes("Level 1: bar"), `Expected Level 1 bar:\n${result.stdout}`);
+  assert(result.stdout.includes("function foo"), `Expected foo source:\n${result.stdout}`);
+  assert(result.stdout.includes("function bar"), `Expected bar source:\n${result.stdout}`);
+  console.log("PASS: deep-think TS (depth 1)");
+}
+
+// ── deep-think: TS fixture depth=2 visits all levels (bar -> qux + baz) ──────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTs, "--symbol", "foo", "--depth", "2"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think depth=2 exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Level 0: foo"), `Expected Level 0:\n${result.stdout}`);
+  assert(result.stdout.includes("Level 1: bar"), `Expected Level 1:\n${result.stdout}`);
+  assert(result.stdout.includes("Level 2: qux"), `Expected Level 2 qux:\n${result.stdout}`);
+  assert(result.stdout.includes("Level 2: baz"), `Expected Level 2 baz:\n${result.stdout}`);
+  console.log("PASS: deep-think TS (depth 2 — foo->bar->qux,baz)");
+}
+
+// ── deep-think: Go fixture ────────────────────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureGo, "--symbol", "foo", "--depth", "1"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think Go exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Level 0: foo"), `Expected Level 0 foo:\n${result.stdout}`);
+  assert(result.stdout.includes("Level 1: bar"), `Expected Level 1 bar:\n${result.stdout}`);
+  assert(result.stdout.includes("func foo"), `Expected Go foo source:\n${result.stdout}`);
+  assert(result.stdout.includes("func bar"), `Expected Go bar source:\n${result.stdout}`);
+  console.log("PASS: deep-think Go (depth 1)");
+}
+
+// ── deep-think: depth=0 only emits root ──────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTs, "--symbol", "foo", "--depth", "0"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think depth=0 exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Level 0: foo"), `Expected Level 0:\n${result.stdout}`);
+  assert(!result.stdout.includes("Level 1:"), `Expected no Level 1 at depth=0:\n${result.stdout}`);
+  console.log("PASS: deep-think TS (depth 0 — root only)");
+}
+
+// ── deep-think: error on missing symbol ──────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTs, "--symbol", "nonexistent", "--depth", "1"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think missing symbol should still exit 0:\n${result.stderr}`);
+  assert(result.stdout.includes("NOT FOUND"), `Expected NOT FOUND message:\n${result.stdout}`);
+  console.log("PASS: deep-think NOT FOUND message for missing symbol");
 }
 
 console.log("PASS: all CLI tests");
