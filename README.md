@@ -4,158 +4,192 @@ Portable LSP analysis tools for AI agents — build definition trees, resolve sy
 
 ## What Is This?
 
-This repository ships four skills that let AI agents (Claude Code, OpenCode, etc.) analyze code using Language Server Protocol (LSP) data:
+Four skills that let AI agents (Claude Code, OpenCode, etc.) analyze code using Language Server Protocol (LSP) data:
 
 | Skill | What it does |
 |-------|-------------|
-| `lsprag-def-tree` | Build a definition tree from a symbol (shows what functions/methods a function calls) |
+| `lsprag-def-tree` | Build a call tree from a symbol (shows what functions a function calls, recursively) |
 | `lsprag-reference-info` | Find all callers of a symbol across a codebase |
 | `lsprag-retrieve-defs` | Resolve where each token in a symbol is defined |
 | `lsprag-token-defs` | Extract tokens from a symbol and resolve their definitions in one call |
 
-**No VS Code required.** Each skill is a portable TypeScript module you wire to any LSP server.
+**No VS Code required.** The `lsprag-def-tree` skill runs fully offline with regex-based analysis. The others need a language server for cross-file accuracy.
 
 ## Prerequisites
 
-- **Node.js 18+** and **npm** (to run the TypeScript modules)
-- **An LSP server** for your language (e.g. `gopls` for Go, `tsserver` for TypeScript)
+- **Node.js 18+** and **npm**
+- **`npx tsx`** — install with `npm install -g tsx` if not available
 
 ## Quick Install
 
 ```bash
-# 1. Clone and install dependencies
+# 1. Clone to a fixed location (the skills reference this path)
 git clone https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills
 cd ~/.lsprag-skills
+
+# 2. Install Node.js dev dependencies (only tsx and typescript — no runtime deps)
 npm install
 
-# 2. Verify everything works
-npm test
+# 3. Persist the env var so every terminal session can find the skills
+echo 'export LSPRAG_SKILLS_ROOT=~/.lsprag-skills' >> ~/.bashrc
+source ~/.bashrc   # or open a new terminal
+
+# 4. Verify it works
+npx tsx scripts/def-tree-cli.ts \
+  --file tests/fixtures/def-tree-sample.ts \
+  --symbol foo
+```
+
+Expected output:
+```
+foo
+└─ bar : bar
+   └─ baz : baz
+```
+
+**Or run the automated installer** (handles npm install, env var, Claude Code alias, and OpenCode):
+
+```bash
+bash ~/.lsprag-skills/install.sh
+# Then open a new terminal (or run: source ~/.bashrc)
 ```
 
 ## Install for Claude Code
 
-The skills in `skills/` are markdown skill files for Claude Code. Copy them to your Claude skills directory:
+The repo ships a valid Claude Code plugin in `.claude-plugin/plugin.json`.
 
-```bash
-REPO=~/.lsprag-skills
-mkdir -p ~/.claude/skills
-cp -r "$REPO/skills/lsprag-def-tree"         ~/.claude/skills/
-cp -r "$REPO/skills/lsprag-reference-info"   ~/.claude/skills/
-cp -r "$REPO/skills/lsprag-retrieve-defs"    ~/.claude/skills/
-cp -r "$REPO/skills/lsprag-token-defs"       ~/.claude/skills/
-```
+### Option A: Shell alias (recommended — loads every session)
 
-Then tell Claude the path to this repo so it can run the code:
+Add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 export LSPRAG_SKILLS_ROOT=~/.lsprag-skills
+alias claude='claude --plugin-dir $LSPRAG_SKILLS_ROOT'
 ```
 
-Add that line to your `~/.bashrc` or `~/.zshrc` to make it permanent.
+Then open a new terminal (or run `source ~/.bashrc`) and start Claude Code normally — skills load every session automatically.
 
-**Usage in Claude Code:**
+### Option B: Use once with `--plugin-dir`
 
-Ask Claude to use `$lsprag-def-tree` (or any other skill) in your prompt, or Claude will automatically invoke it when you ask about code structure.
+```bash
+export LSPRAG_SKILLS_ROOT=~/.lsprag-skills
+claude --plugin-dir ~/.lsprag-skills
+```
+
+### Option C: Install persistently via plugin command
+
+```bash
+# Register the GitHub repo as a plugin source
+claude plugin marketplace add Gwihwan-Go/lsprag-skills
+
+# Install the plugin
+claude plugin install lsprag-skills
+```
+
+After install, set the env var in your shell rc so skills can run:
+
+```bash
+echo 'export LSPRAG_SKILLS_ROOT=~/.lsprag-skills' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Using the Skills in Claude Code
+
+Once installed, invoke with `/`:
+
+```
+/lsprag-def-tree --file src/server.ts --symbol handleRequest --depth 3
+```
+
+Or let Claude detect when to use them automatically — just describe what you want:
+
+```
+Show me the call tree for handleRequest in src/server.ts
+```
 
 ## Install for OpenCode
 
-OpenCode tools live in `~/.config/opencode/tools/`. Copy the ready-to-use tool file:
+Copy the tool file to OpenCode's tools directory:
 
 ```bash
-REPO=~/.lsprag-skills
 mkdir -p ~/.config/opencode/tools
-cp "$REPO/tools/lsprag_def_tree.ts" ~/.config/opencode/tools/
-```
 
-Set the repo root so the tool can find the core modules:
+# Install plugin dependency
+npm install --prefix ~/.config/opencode @opencode-ai/plugin
 
-```bash
+# Copy the tool
+cp ~/.lsprag-skills/tools/lsprag_def_tree.ts ~/.config/opencode/tools/
+
+# Set env var
 export LSPRAG_SKILLS_ROOT=~/.lsprag-skills
 ```
 
-Add that to your `~/.bashrc` or `~/.zshrc`.
+Restart OpenCode — the `lsprag_def_tree` tool appears automatically.
 
-Restart OpenCode. The tool `lsprag_def_tree` will appear automatically.
-
-> **Note:** OpenCode's plugin system requires `@opencode-ai/plugin`.
-> Install it if missing: `npm install --prefix ~/.config/opencode @opencode-ai/plugin`
-
-## One-Line Install Script
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Gwihwan-Go/lsprag-skills/main/install.sh | bash
+**Test it from a prompt:**
+```
+Use lsprag_def_tree to show me the call tree for foo in ~/.lsprag-skills/tests/fixtures/def-tree-sample.ts
 ```
 
-Or run locally from the repo root:
+## Use CLI Scripts Directly
+
+The `scripts/` directory has standalone CLI wrappers (no agent needed):
 
 ```bash
-bash install.sh
+# TypeScript / JavaScript
+npx tsx $LSPRAG_SKILLS_ROOT/scripts/def-tree-cli.ts \
+  --file /path/to/source.ts \
+  --symbol myFunction \
+  --depth 3
+
+# Go
+npx tsx $LSPRAG_SKILLS_ROOT/scripts/def-tree-cli.ts \
+  --file /path/to/source.go \
+  --symbol MyFunc
 ```
 
-The script detects whether you have Claude Code or OpenCode installed and wires up the tools automatically.
+Claude Code agents can use these via the **Bash tool** — no plugin setup needed.
 
-## Use the CLI Scripts Directly
+## LSP Server Setup (for cross-file analysis)
 
-The `scripts/` directory has standalone CLI wrappers you can call from the terminal (or from a Claude Code Bash tool):
+`lsprag-def-tree` works without an LSP server (regex mode). The other skills (`reference-info`, `retrieve-defs`, `token-defs`) need one.
 
-```bash
-# Build a definition tree for a function
-npx tsx ~/.lsprag-skills/scripts/def-tree-cli.ts --file /path/to/file.ts --symbol myFunction
-
-# Find references to a symbol
-npx tsx ~/.lsprag-skills/scripts/reference-info-cli.ts --file /path/to/file.ts --line 10 --col 5
-```
-
-## LSP Server Setup
-
-The skills need an LSP server running for your language.
-
-### Go (`gopls`)
+### Go
 
 ```bash
 go install golang.org/x/tools/gopls@latest
 ```
 
-Helper script that finds or installs gopls automatically:
+Auto-detect or install:
 
 ```bash
 gopls_path="$(~/.lsprag-skills/scripts/ensure-gopls.sh)"
 ```
 
-### TypeScript (`tsserver`)
+### TypeScript
 
 ```bash
 npm install -g typescript
-# tsserver is bundled with typescript
+# tsserver is included with typescript
 ```
 
-### Python (`pylsp`)
+### Python
 
 ```bash
 pip install python-lsp-server
 ```
 
-The skills use semantic tokens and go-to-definition requests — any LSP server that supports `textDocument/semanticTokens` and `textDocument/definition` will work.
-
 ## Architecture: The Provider Pattern
 
-Each skill accepts a **Provider** object you implement. The provider connects the skill to your LSP client:
+Each skill accepts a **Provider** you implement that connects it to your LSP client. The CLI scripts and OpenCode tool include self-contained providers you can use as templates:
 
 ```ts
 import { buildDefTree, TokenProvider } from "~/.lsprag-skills/src/treeCore.js";
 
 const provider: TokenProvider = {
-  // Open a document and return its text
-  openDocument: async (uri) => ({
-    uri,
-    languageId: "typescript",
-    getText: () => fs.readFileSync(new URL(uri).pathname, "utf8"),
-  }),
-  // Return document symbols (from LSP textDocument/documentSymbol)
+  openDocument: async (uri) => ({ uri, languageId: "typescript", getText: () => fs.readFileSync(...) }),
   getDocumentSymbols: async (uri) => lspClient.documentSymbols(uri),
-  // Return go-to-definition results (from LSP textDocument/definition)
   getDefinitions: async (doc, pos) => lspClient.definition(doc.uri, pos),
-  // Return semantic tokens (from LSP textDocument/semanticTokens/range)
   getSemanticTokensRange: async (doc, range) => lspClient.semanticTokensRange(doc.uri, range),
   getSemanticTokensLegendRange: async (doc, range) => lspClient.semanticTokensLegend(doc.uri, range),
 };
@@ -163,12 +197,10 @@ const provider: TokenProvider = {
 const tree = await buildDefTree(document, symbol, provider, 3);
 ```
 
-The CLI scripts in `scripts/` and the OpenCode tool in `tools/` include self-contained provider implementations you can read and adapt.
-
 ## Tests
 
 ```bash
-# Core logic tests (no LSP server needed)
+# Core logic + CLI tests (no LSP server needed)
 npm test
 
 # OpenCode integration smoke test (requires opencode CLI)
@@ -178,14 +210,19 @@ npm run test:opencode
 ## Repository Layout
 
 ```
-src/         portable TypeScript core modules
-skills/      skill descriptors for agent runtimes
-tools/       ready-to-deploy OpenCode tool files
-scripts/     CLI wrappers (run with tsx)
-tests/       core unit tests + OpenCode integration test
+src/           portable TypeScript core modules
+skills/        skill descriptors for Claude Code and other agents
+  lsprag-def-tree/
+  lsprag-reference-info/
+  lsprag-retrieve-defs/
+  lsprag-token-defs/
+tools/         ready-to-deploy OpenCode tool files
+scripts/       CLI wrappers (run with tsx)
+tests/         unit tests + integration tests
+.claude-plugin/ Claude Code plugin manifest
 ```
 
-## Skill-Specific Docs
+## Skill Docs
 
 - `skills/lsprag-def-tree/SKILL.md`
 - `skills/lsprag-reference-info/SKILL.md`
