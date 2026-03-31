@@ -17,6 +17,12 @@ case "$CMD" in
   def-tree|deftree|tree)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/def-tree-cli.ts" "$@"
     ;;
+  retrieve-def|retrieve|def)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/retrieve-def-cli.ts" "$@"
+    ;;
+  token-defs|tokendefs|tokens)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/token-defs-cli.ts" "$@"
+    ;;
   version|--version|-V)
     echo "lsprag 0.1.0 (root: $ROOT)"
     ;;
@@ -28,7 +34,9 @@ Usage:
   lsprag <command> [options]
 
 Commands:
-  def-tree    Build a definition tree showing what a function calls
+  def-tree      Build a call tree: what does a function call, recursively?
+  retrieve-def  Get the full source of a symbol's definition
+  token-defs    List tokens inside a symbol with their definition locations
 
 Options:
   -h, --help      Show this help
@@ -37,9 +45,11 @@ Options:
 Run 'lsprag <command> --help' for command-specific options.
 
 Examples:
-  lsprag def-tree --file src/server.ts --symbol handleRequest
-  lsprag def-tree --file main.go --symbol ProcessRequest --depth 4
-  lsprag def-tree --file "$(realpath src/foo.ts)" --symbol myFn --depth 5
+  lsprag def-tree     --file src/server.ts   --symbol handleRequest
+  lsprag retrieve-def --file src/server.ts   --symbol handleRequest
+  lsprag retrieve-def --file src/server.ts   --symbol parseBody --location 42:15
+  lsprag token-defs   --file src/server.ts   --symbol handleRequest
+  lsprag def-tree     --file "$(realpath src/foo.ts)" --symbol myFn --depth 5
 HELP
     ;;
   *)

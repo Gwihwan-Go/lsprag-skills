@@ -9,7 +9,9 @@ import { spawnSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const cliScript = path.join(repoRoot, "scripts", "def-tree-cli.ts");
+const cliScript         = path.join(repoRoot, "scripts", "def-tree-cli.ts");
+const retrieveDefScript = path.join(repoRoot, "scripts", "retrieve-def-cli.ts");
+const tokenDefsScript   = path.join(repoRoot, "scripts", "token-defs-cli.ts");
 const fixtureTs = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.ts");
 const fixtureGo = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.go");
 
@@ -64,6 +66,71 @@ function runCli(file: string, symbol: string, depth = 3): string {
   );
   assert.equal(result.status, 1, "Expected exit code 1 for missing file");
   console.log("PASS: CLI error on missing file");
+}
+
+// ── retrieve-def: by name ─────────────────────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", retrieveDefScript, "--file", fixtureTs, "--symbol", "bar"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `retrieve-def exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# bar"), `Expected "# bar" header:\n${result.stdout}`);
+  assert(result.stdout.includes("function bar"), `Expected function body:\n${result.stdout}`);
+  assert(result.stdout.includes("baz"), `Expected baz call in body:\n${result.stdout}`);
+  console.log("PASS: retrieve-def by name (TS)");
+}
+
+// ── retrieve-def: by location (bar call on line 2 col 10) ────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", retrieveDefScript, "--file", fixtureTs, "--symbol", "bar", "--location", "2:10"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `retrieve-def --location exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# bar"), `Expected "# bar" header:\n${result.stdout}`);
+  console.log("PASS: retrieve-def by location (TS)");
+}
+
+// ── retrieve-def: Go fixture ──────────────────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", retrieveDefScript, "--file", fixtureGo, "--symbol", "foo"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `retrieve-def Go exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# foo"), `Expected "# foo" header:\n${result.stdout}`);
+  assert(result.stdout.includes("func foo"), `Expected Go function body:\n${result.stdout}`);
+  console.log("PASS: retrieve-def by name (Go)");
+}
+
+// ── token-defs: TS fixture ────────────────────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", tokenDefsScript, "--file", fixtureTs, "--symbol", "foo"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `token-defs exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Tokens in 'foo'"), `Expected header:\n${result.stdout}`);
+  assert(result.stdout.includes("bar"), `Expected bar token:\n${result.stdout}`);
+  console.log("PASS: token-defs (TS)");
+}
+
+// ── token-defs: Go fixture ────────────────────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", tokenDefsScript, "--file", fixtureGo, "--symbol", "foo"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `token-defs Go exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Tokens in 'foo'"), `Expected header:\n${result.stdout}`);
+  assert(result.stdout.includes("bar"), `Expected bar token:\n${result.stdout}`);
+  console.log("PASS: token-defs (Go)");
 }
 
 console.log("PASS: all CLI tests");
