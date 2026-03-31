@@ -1,0 +1,29 @@
+{
+  "name": "lsprag-skills",
+  "version": "0.1.0",
+  "description": "Portable LSP analysis skills for AI agents — build definition trees, find references, and decode semantic tokens from any codebase without VS Code.",
+  "author": {
+    "name": "Gwihwan Go",
+    "url": "https://github.com/Gwihwan-Go"
+  },
+  "homepage": "https://github.com/Gwihwan-Go/lsprag-skills",
+  "repository": "https://github.com/Gwihwan-Go/lsprag-skills",
+  "license": "MIT",
+  "keywords": [
+    "lsp",
+    "code-analysis",
+    "definition-tree",
+    "semantic-tokens",
+    "references",
+    "typescript",
+    "go",
+    "agent-tools"
+  ],
+  "skills": [
+    "./skills/lsprag-def-tree",
+    "./skills/lsprag-reference-info",
+    "./skills/lsprag-retrieve-defs",
+    "./skills/lsprag-token-defs"
+  ],
+  "hooks": {}
+}

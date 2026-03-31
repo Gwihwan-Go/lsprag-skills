@@ -101,10 +101,12 @@ export function prettyPrintDefTree(
     node: DefinitionTreeNode,
     prefix: string = '',
     isLast: boolean = true,
-    visited: Set<string> = new Set()
+    visited: Set<string> = new Set(),
+    depth: number = 0
 ): string {
     const nodeId = `${node.name}|${node.uri}|${node.edge?.via || ''}|${node.edge?.loc || ''}`;
-    const connector = prefix === '' ? '' : (isLast ? '└─ ' : '├─ ');
+    // depth===0 means this is the root node — show no connector
+    const connector = depth === 0 ? '' : (isLast ? '└─ ' : '├─ ');
 
     if (visited.has(nodeId)) {
         return '';
@@ -119,7 +121,9 @@ export function prettyPrintDefTree(
     const lines: string[] = [`${prefix}${connector}${label}`];
 
     const rawChildren = Array.isArray(node.children) ? node.children : [];
-    const nextPrefixBase = isLast ? '   ' : '│  ';
+    // At depth 0 (root), children get no extra indentation prefix;
+    // at deeper levels, indent based on whether current node is last
+    const nextPrefixBase = depth === 0 ? '' : (isLast ? '   ' : '│  ');
 
     if (node.external && node.detail) {
         lines.push(`${prefix}${nextPrefixBase}${String(node.detail).trim()}`);
@@ -151,7 +155,7 @@ export function prettyPrintDefTree(
     groupedChildren.forEach((child: DefinitionTreeNode, index: number) => {
         const childIsLast = index === groupedChildren.length - 1;
         const childPrefix = prefix + nextPrefixBase;
-        lines.push(prettyPrintDefTree(child, childPrefix, childIsLast, visited));
+        lines.push(prettyPrintDefTree(child, childPrefix, childIsLast, visited, depth + 1));
     });
 
     visited.delete(nodeId);

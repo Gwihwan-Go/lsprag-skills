@@ -17,17 +17,30 @@ Four skills that let AI agents (Claude Code, OpenCode, etc.) analyze code using 
 
 ## Prerequisites
 
-- **Node.js 18+** and **npm**
-- **`npx tsx`** — install with `npm install -g tsx` if not available
+- **Node.js 18+** and **npm** — [nodejs.org](https://nodejs.org/)
+- **`tsx`** — TypeScript runner, installed automatically by `npm install` in this repo.
+  If you need it globally: `npm install -g tsx`
 
 ## Quick Install
+
+### Option A: Automated installer (recommended)
+
+```bash
+git clone https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills
+bash ~/.lsprag-skills/install.sh
+# Then open a new terminal (or: source ~/.bashrc)
+```
+
+The installer runs `npm install`, sets `LSPRAG_SKILLS_ROOT`, adds a Claude Code alias, and configures OpenCode if detected.
+
+### Option B: Manual setup
 
 ```bash
 # 1. Clone to a fixed location (the skills reference this path)
 git clone https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills
 cd ~/.lsprag-skills
 
-# 2. Install Node.js dev dependencies (only tsx and typescript — no runtime deps)
+# 2. Install dev dependencies (only tsx + typescript — no runtime deps)
 npm install
 
 # 3. Persist the env var so every terminal session can find the skills
@@ -45,13 +58,6 @@ Expected output:
 foo
 └─ bar : bar
    └─ baz : baz
-```
-
-**Or run the automated installer** (handles npm install, env var, Claude Code alias, and OpenCode):
-
-```bash
-bash ~/.lsprag-skills/install.sh
-# Then open a new terminal (or run: source ~/.bashrc)
 ```
 
 ## Install for Claude Code
@@ -114,13 +120,14 @@ Copy the tool file to OpenCode's tools directory:
 ```bash
 mkdir -p ~/.config/opencode/tools
 
-# Install plugin dependency
+# The tool needs @opencode-ai/plugin (OpenCode may include this already;
+# install manually if the tool fails to load)
 npm install --prefix ~/.config/opencode @opencode-ai/plugin
 
-# Copy the tool
+# Copy the tool wrapper
 cp ~/.lsprag-skills/tools/lsprag_def_tree.ts ~/.config/opencode/tools/
 
-# Set env var
+# Make sure LSPRAG_SKILLS_ROOT is set (add to ~/.bashrc if not already done)
 export LSPRAG_SKILLS_ROOT=~/.lsprag-skills
 ```
 
@@ -128,7 +135,8 @@ Restart OpenCode — the `lsprag_def_tree` tool appears automatically.
 
 **Test it from a prompt:**
 ```
-Use lsprag_def_tree to show me the call tree for foo in ~/.lsprag-skills/tests/fixtures/def-tree-sample.ts
+Use lsprag_def_tree to show me the call tree for the foo function in
+$HOME/.lsprag-skills/tests/fixtures/def-tree-sample.ts
 ```
 
 ## Use CLI Scripts Directly
@@ -184,7 +192,9 @@ pip install python-lsp-server
 Each skill accepts a **Provider** you implement that connects it to your LSP client. The CLI scripts and OpenCode tool include self-contained providers you can use as templates:
 
 ```ts
-import { buildDefTree, TokenProvider } from "~/.lsprag-skills/src/treeCore.js";
+// Use an absolute path or process.env.LSPRAG_SKILLS_ROOT
+import { buildDefTree } from "/path/to/lsprag-skills/src/treeCore.js";
+import type { TokenProvider } from "/path/to/lsprag-skills/src/tokenCore.js";
 
 const provider: TokenProvider = {
   openDocument: async (uri) => ({ uri, languageId: "typescript", getText: () => fs.readFileSync(...) }),
