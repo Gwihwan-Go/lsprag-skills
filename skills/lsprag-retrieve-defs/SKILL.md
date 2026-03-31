@@ -1,28 +1,77 @@
 ---
 name: lsprag-retrieve-defs
-description: Use when exporting LSPRAG definition retrieval (retrieveDefs) as a standalone module or wiring it to custom LSP/MCP clients.
+version: "0.1.0"
+description: "Batch-resolve where each decoded semantic token in a symbol is defined. Returns tokens annotated with definition locations. Core primitive used by lsprag-def-tree. Requires LSP backend."
+argument-hint: 'lsprag-retrieve-defs — call retrieveDefs(document, tokens, provider)'
+allowed-tools: Bash, Read
+homepage: https://github.com/Gwihwan-Go/lsprag-skills
+repository: https://github.com/Gwihwan-Go/lsprag-skills
+author: Gwihwan-Go
+license: MIT
+user-invocable: true
+metadata:
+  lsprag:
+    requires:
+      env:
+        - LSPRAG_SKILLS_ROOT
+      bins:
+        - node
+    tags:
+      - lsp
+      - code-analysis
+      - definitions
+      - typescript
+      - go
 ---
 
-# LSPRAG Definition Retrieval (Portable)
+# LSPRAG Retrieve Definitions
 
-This skill packages the portable `retrieveDefs` implementation so it can run outside VS Code.
+Given a list of decoded semantic tokens, batch-resolve where each is defined using an LSP-backed provider. This is the core primitive that powers `lsprag-def-tree` and `lsprag-token-defs`.
 
-## Install + Use
+## When to Use
 
-- See `skills/lsprag-retrieve-defs/references/deployment.md` for step-by-step install and usage.
+- You have a list of tokens from a function and need to know where each is defined
+- You want to build a custom dependency analysis on top of definition data
+- You are composing this with `lsprag-token-defs` for a full token + definition pipeline
 
-## Core Module
+## Note for Agents
 
-- Portable API: `src/definitionCore.ts`
-- Exported function: `retrieveDefs(document, decodedTokens, provider, skipDefinition?)`
-- You must provide a `DefinitionProvider` that connects to your LSP client or MCP server.
+This skill is a **library primitive** — it does not have a standalone CLI wrapper. To use it:
 
-## Quick Wiring Guide
+1. For a ready-to-use call tree, use `lsprag-def-tree` instead:
+   ```bash
+   LSPRAG_SKILLS_ROOT="${LSPRAG_SKILLS_ROOT:-$HOME/.lsprag-skills}" \
+   npx tsx "$LSPRAG_SKILLS_ROOT/scripts/def-tree-cli.ts" \
+     --file /absolute/path/to/source.ts \
+     --symbol myFunction
+   ```
 
-1. Implement `DefinitionProvider` for your environment. Required: `getDefinitions`. Optional: `isInWorkspace`, `log`.
-2. Call `retrieveDefs` with your document and decoded tokens.
+2. For programmatic use, import and call directly (requires LSP backend):
 
-## Deployment + Tests
+```ts
+import { retrieveDefs, DefinitionProvider } from "$LSPRAG_SKILLS_ROOT/src/definitionCore.js";
 
-- Deployment guide: `skills/lsprag-retrieve-defs/references/deployment.md`
-- Testing plan: `skills/lsprag-retrieve-defs/references/testing-plan.md`
+const provider: DefinitionProvider = {
+  getDefinitions: async (doc, pos) => lspClient.definition(doc.uri, pos),
+};
+
+const tokensWithDefs = await retrieveDefs(document, decodedTokens, provider);
+```
+
+## Inputs
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `document` | `LspDocument` | Source document |
+| `decodedTokens` | `CoreDecodedToken[]` | Tokens from semantic token decoding |
+| `provider` | `DefinitionProvider` | LSP definition backend |
+| `skipDefinition` | `boolean` | Skip def lookup (default: false) |
+
+## Output
+
+`CoreDecodedToken[]` — same tokens with `.definition`, `.document`, `.defSymbol`, `.defSymbolRange` populated.
+
+## Notes
+
+- Requires an LSP server for definition lookup
+- See `skills/lsprag-retrieve-defs/references/deployment.md` for full wiring guide
