@@ -177,8 +177,9 @@ const tree = await buildDefTree(document, fooSymbol!, 3);
 assert.equal(tree.name, "foo");
 assert.equal(tree.children.length, 1);
 assert.equal(tree.children[0].name, "bar");
-assert.equal(tree.children[0].children.length, 1);
-assert.equal(tree.children[0].children[0].name, "baz");
+assert.equal(tree.children[0].children.length, 2);
+const barChildNames = tree.children[0].children.map((child) => child.name).sort();
+assert.deepEqual(barChildNames, ["baz", "qux"]);
 
 const printed = prettyPrintDefTree(tree);
 assert(printed.includes("foo"));
