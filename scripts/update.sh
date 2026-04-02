@@ -55,7 +55,7 @@ else
 fi
 
 if [ -z "${LSPRAG_LSP_PROVIDER:-}" ]; then
-  warn "LSPRAG_LSP_PROVIDER is not set (regex provider will be used as fallback)"
+  warn "LSPRAG_LSP_PROVIDER is not set (token-defs/token-analysis require an LSP provider)"
 else
   ok "LSPRAG_LSP_PROVIDER=$LSPRAG_LSP_PROVIDER"
 fi

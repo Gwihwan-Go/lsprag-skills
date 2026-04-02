@@ -13,8 +13,19 @@ const cliScript         = path.join(repoRoot, "scripts", "def-tree-cli.ts");
 const retrieveDefScript = path.join(repoRoot, "scripts", "retrieve-def-cli.ts");
 const tokenDefsScript   = path.join(repoRoot, "scripts", "token-defs-cli.ts");
 const deepThinkScript   = path.join(repoRoot, "scripts", "deep-think-cli.ts");
+const lspragScript      = path.join(repoRoot, "scripts", "lsprag");
+const mockLspProvider   = path.join(repoRoot, "tests", "fixtures", "mock-lsp-provider.mjs");
+const mockLspProviderRelativeNoDot = path.join("tests", "fixtures", "mock-lsp-provider.mjs").replace(/\\/g, "/");
 const fixtureTs = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.ts");
 const fixtureGo = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.go");
+
+function withMockLspEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    LSPRAG_LSP_PROVIDER: mockLspProvider,
+    LSPRAG_PROVIDER_PATH: "",
+  };
+}
 
 function runCli(file: string, symbol: string, depth = 3): string {
   const result = spawnSync(
@@ -85,6 +96,32 @@ function runCli(file: string, symbol: string, depth = 3): string {
   console.log("PASS: retrieve-def by name (TS)");
 }
 
+// ── retrieve-def: by multiple symbols (comma-separated) ─────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", retrieveDefScript, "--file", fixtureTs, "--symbol", "foo,bar"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `retrieve-def multi-symbol (comma) exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# foo"), `Expected "# foo" header:\n${result.stdout}`);
+  assert(result.stdout.includes("# bar"), `Expected "# bar" header:\n${result.stdout}`);
+  console.log("PASS: retrieve-def by multiple symbols (comma)");
+}
+
+// ── retrieve-def: by multiple symbols (repeated flags) ──────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", retrieveDefScript, "--file", fixtureTs, "--symbol", "foo", "--symbol", "bar"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `retrieve-def multi-symbol (repeat) exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# foo"), `Expected "# foo" header:\n${result.stdout}`);
+  assert(result.stdout.includes("# bar"), `Expected "# bar" header:\n${result.stdout}`);
+  console.log("PASS: retrieve-def by multiple symbols (repeat flag)");
+}
+
 // ── retrieve-def: by location (bar call on line 5 col 10) ────────────────────
 {
   const result = spawnSync(
@@ -95,6 +132,34 @@ function runCli(file: string, symbol: string, depth = 3): string {
   assert.equal(result.status, 0, `retrieve-def --location exited ${result.status}:\n${result.stderr}`);
   assert(result.stdout.includes("# bar"), `Expected "# bar" header:\n${result.stdout}`);
   console.log("PASS: retrieve-def by location (TS)");
+}
+
+// ── retrieve-def: line-range returns all defs used in range ──────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", retrieveDefScript, "--file", fixtureTs, "--line-range", "14:17"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `retrieve-def --line-range exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# bar"), `Expected bar definition:\n${result.stdout}`);
+  assert(result.stdout.includes("# qux"), `Expected qux definition:\n${result.stdout}`);
+  assert(result.stdout.includes("# baz"), `Expected baz definition:\n${result.stdout}`);
+  console.log("PASS: retrieve-def line-range returns all defs in range");
+}
+
+// ── retrieve-def: line-range + multi-symbol filter ───────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", retrieveDefScript, "--file", fixtureTs, "--line-range", "14:17", "--symbol", "qux,baz"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `retrieve-def --line-range with symbol filter exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# qux"), `Expected qux definition:\n${result.stdout}`);
+  assert(result.stdout.includes("# baz"), `Expected baz definition:\n${result.stdout}`);
+  assert(!result.stdout.includes("# bar"), `Did not expect bar definition:\n${result.stdout}`);
+  console.log("PASS: retrieve-def line-range + multi-symbol filter");
 }
 
 // ── retrieve-def: Go fixture ──────────────────────────────────────────────────
@@ -115,7 +180,7 @@ function runCli(file: string, symbol: string, depth = 3): string {
   const result = spawnSync(
     "npx",
     ["tsx", tokenDefsScript, "--file", fixtureTs, "--symbol", "foo"],
-    { encoding: "utf8", cwd: repoRoot }
+    { encoding: "utf8", cwd: repoRoot, env: withMockLspEnv() }
   );
   assert.equal(result.status, 0, `token-defs exited ${result.status}:\n${result.stderr}`);
   assert(result.stdout.includes("Tokens in 'foo'"), `Expected header:\n${result.stdout}`);
@@ -123,17 +188,100 @@ function runCli(file: string, symbol: string, depth = 3): string {
   console.log("PASS: token-defs (TS)");
 }
 
+// ── token-defs: markdown + source expansion ──────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", tokenDefsScript, "--file", fixtureTs, "--symbol", "foo", "--full-source", "--format", "markdown"],
+    { encoding: "utf8", cwd: repoRoot, env: withMockLspEnv() }
+  );
+  assert.equal(result.status, 0, `token-defs markdown exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# Token Analysis"), `Expected markdown analysis header:\n${result.stdout}`);
+  assert(result.stdout.includes("## Definition Sources"), `Expected definition sources section:\n${result.stdout}`);
+  assert(result.stdout.includes("### `bar`"), `Expected bar definition block:\n${result.stdout}`);
+  console.log("PASS: token-defs markdown + source");
+}
+
 // ── token-defs: Go fixture ────────────────────────────────────────────────────
 {
   const result = spawnSync(
     "npx",
     ["tsx", tokenDefsScript, "--file", fixtureGo, "--symbol", "foo"],
-    { encoding: "utf8", cwd: repoRoot }
+    { encoding: "utf8", cwd: repoRoot, env: withMockLspEnv() }
   );
   assert.equal(result.status, 0, `token-defs Go exited ${result.status}:\n${result.stderr}`);
   assert(result.stdout.includes("Tokens in 'foo'"), `Expected header:\n${result.stdout}`);
   assert(result.stdout.includes("bar"), `Expected bar token:\n${result.stdout}`);
   console.log("PASS: token-defs (Go)");
+}
+
+// ── token-defs: provider path without leading "./" is accepted ───────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", tokenDefsScript, "--file", fixtureTs, "--symbol", "foo"],
+    {
+      encoding: "utf8",
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        LSPRAG_LSP_PROVIDER: mockLspProviderRelativeNoDot,
+        LSPRAG_PROVIDER_PATH: "",
+      },
+    }
+  );
+  assert.equal(result.status, 0, `token-defs relative provider path exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Tokens in 'foo'"), `Expected header:\n${result.stdout}`);
+  console.log("PASS: token-defs provider path without leading ./");
+}
+
+// ── lsprag wrapper: token-analysis alias ─────────────────────────────────────
+{
+  const result = spawnSync(
+    "bash",
+    [lspragScript, "token-analysis", "--file", fixtureTs, "--symbol", "foo"],
+    { encoding: "utf8", cwd: repoRoot, env: withMockLspEnv() }
+  );
+  assert.equal(result.status, 0, `token-analysis alias exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("# Token Analysis"), `Expected markdown output:\n${result.stdout}`);
+  assert(result.stdout.includes("Marker legend"), `Expected marker legend:\n${result.stdout}`);
+  assert(result.stdout.includes("| Token | Symbol Type | Lines of Symbols |"), `Expected analysis table:\n${result.stdout}`);
+  assert(result.stdout.includes("## Agent Instructions"), `Expected recursive instructions:\n${result.stdout}`);
+  console.log("PASS: lsprag token-analysis alias");
+}
+
+// ── lsprag wrapper: token-analysis with line-range ───────────────────────────
+{
+  const result = spawnSync(
+    "bash",
+    [lspragScript, "token-analysis", "--file", fixtureTs, "--symbol", "foo", "--line-range", "5:5"],
+    { encoding: "utf8", cwd: repoRoot, env: withMockLspEnv() }
+  );
+  assert.equal(result.status, 0, `token-analysis --line-range exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Line filter: `5:5`"), `Expected line range note:\n${result.stdout}`);
+  assert(result.stdout.includes("T1:bar"), `Expected bar token row:\n${result.stdout}`);
+  console.log("PASS: lsprag token-analysis with line-range");
+}
+
+// ── token-defs: LSP-required prompt when provider is missing ─────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", tokenDefsScript, "--file", fixtureTs, "--symbol", "foo"],
+    {
+      encoding: "utf8",
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        LSPRAG_LSP_PROVIDER: "",
+        LSPRAG_PROVIDER_PATH: "",
+      },
+    }
+  );
+  assert.equal(result.status, 2, `Expected exit code 2 for missing LSP provider:\n${result.stderr}`);
+  assert(result.stderr.includes("[LSP Required]"), `Expected LSP-required header:\n${result.stderr}`);
+  assert(result.stderr.includes("rg -n"), `Expected shell fallback guidance:\n${result.stderr}`);
+  console.log("PASS: token-defs LSP-required prompt");
 }
 
 // ── deep-think: TS fixture depth=1 ───────────────────────────────────────────

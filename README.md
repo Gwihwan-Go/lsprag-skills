@@ -1,6 +1,6 @@
 # lsprag-skills
 
-Portable LSP code analysis for AI agents — build definition trees, retrieve source, trace dependencies, and deep-expand call graphs. Works offline with no VS Code required.
+Portable LSP code analysis for AI agents — build definition trees, retrieve source, trace dependencies, and deep-expand call graphs.
 
 ## What Is This?
 
@@ -11,9 +11,11 @@ A set of `lsprag` skills that give AI agents (Claude Code, OpenCode, etc.) a `ls
 | `lsprag def-tree` | Build a call tree from a function (what does it call, recursively?) |
 | `lsprag retrieve-def` | Get the full source of any symbol, by name or by call-site location |
 | `lsprag token-defs` | Decompose a symbol into tokens and show where each is defined |
+| `lsprag token-analysis` | Token-defs analysis mode: markdown links + definition source blocks |
 | `lsprag deep-think` | BFS expansion: retrieve source + deps for a symbol and all its transitive dependencies |
 
-**No VS Code required.** Works offline with regex-based analysis. Plug in a real LSP server (`gopls`, `tsserver`, `pylsp`) for cross-file accuracy.
+**No VS Code required.** `def-tree`, `retrieve-def`, and `deep-think` work without an external LSP server.  
+`token-defs` and `token-analysis` are LSP-only; if LSP is unavailable, use shell tools (`ls`, `rg`) for manual tracing.
 
 **Supported languages:** TypeScript, JavaScript, Go, Python
 
@@ -43,7 +45,7 @@ cd ~/.lsprag-skills
 npm install
 
 echo 'export LSPRAG_SKILLS_ROOT=~/.lsprag-skills' >> ~/.bashrc
-echo 'export LSPRAG_LSP_PROVIDER=~/.lsprag-skills/providers/regex-provider.mjs' >> ~/.bashrc
+echo 'export LSPRAG_LSP_PROVIDER=~/.lsprag-skills/providers/your-lsp-provider.mjs' >> ~/.bashrc
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
@@ -75,18 +77,29 @@ handleRequest
    └─ formatJSON
 ```
 
-### retrieve-def — Full Source of a Symbol
+### retrieve-def — Full Source of Symbol Definitions
 
 By name:
 
 ```bash
 lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody
+# multi-symbol (comma-separated or repeated flag):
+lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody,readStream
+lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody --symbol readStream
 ```
 
 By call-site location (go-to-definition — 1-indexed line:col):
 
 ```bash
-lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody --location 42:15
+lsprag retrieve-def --file "$(realpath src/server.ts)" --location 42:15
+```
+
+By line range (load all unique definitions referenced in a line slice):
+
+```bash
+lsprag retrieve-def --file "$(realpath src/server.ts)" --line-range 120:180
+# optional symbol filter:
+lsprag retrieve-def --file "$(realpath src/server.ts)" --line-range 120:180 --symbol parseBody,readStream
 ```
 
 Output:
@@ -113,6 +126,31 @@ Tokens in 'handleRequest' (src/server.ts:15:10):
   L  17:C  3  sendResponse ->  src/server.ts:58:10
   L  17:C 16  formatJSON   ->  src/format.ts:3:10
 ```
+
+Optional analysis mode with definition source expansion:
+
+```bash
+lsprag token-defs --file "$(realpath src/server.ts)" --symbol handleRequest --full-source --format markdown
+# or shortcut:
+lsprag token-analysis --file "$(realpath src/server.ts)" --symbol handleRequest
+# optional: restrict token rows to a line slice inside the symbol body
+lsprag token-analysis --file "$(realpath src/server.ts)" --symbol handleRequest --line-range 20:60
+```
+
+This prints:
+- full symbol source with inline token markers: `<<Tn:token>>`
+- token summary table:
+  - Token
+  - Symbol Type (LSP SymbolKind)
+  - Lines of Symbols
+- `lsprag retrieve-def` instruction for each dependency
+- recursive guidance for follow-up `retrieve-def` and `token-analysis` calls
+
+LSP policy:
+- `token-defs` / `token-analysis` require `LSPRAG_LSP_PROVIDER` (or `LSPRAG_PROVIDER_PATH`)
+- if LSP is unavailable, use shell tools directly:
+  - `ls -la <directory>`
+  - `rg -n "<symbol>" <file>`
 
 ### deep-think — BFS Dependency Expansion
 
@@ -152,11 +190,13 @@ Start at `--depth 1` for initial exploration; increase for deeper understanding.
 | Goal | Use |
 |------|-----|
 | What does function X call? | `lsprag def-tree` |
-| Read a function's full source | `lsprag retrieve-def` |
+| Read one or more symbol definitions | `lsprag retrieve-def --symbol <a,b,...>` |
 | Jump to definition from a call site | `lsprag retrieve-def --location <line>:<col>` |
+| Load all definitions used in specific lines | `lsprag retrieve-def --line-range <start:end>` |
 | What identifiers does a function depend on? | `lsprag token-defs` |
+| Get dependency map + definition sources (linked) | `lsprag token-analysis` |
 | Understand a complex function before writing tests or refactoring | `lsprag deep-think` |
-| Quick text search | `grep -rn <name> . --include="*.ts"` |
+| Quick text search | `rg -n <name> .` |
 
 ## Install for Claude Code
 
@@ -201,7 +241,7 @@ Restart OpenCode — the `lsprag_def_tree` tool appears automatically.
 
 ## LSP Server Setup (for cross-file analysis)
 
-All commands work offline in regex mode (same-file only). For cross-file accuracy, install an LSP server and set `LSPRAG_LSP_PROVIDER`.
+For `token-defs` / `token-analysis`, install an LSP server and set `LSPRAG_LSP_PROVIDER`. If LSP is unavailable, use `ls`/`rg` manually.
 
 **Go (gopls)**:
 ```bash
@@ -238,7 +278,7 @@ skills/
     SKILL.md
 src/                   portable TypeScript core modules
 providers/
-  regex-provider.mjs   offline regex-based provider (default)
+  (optional custom LSP provider modules)
 tools/                 OpenCode tool wrappers
 tests/
   cli.test.ts          end-to-end CLI tests (all commands, TS + Go fixtures)

@@ -146,7 +146,7 @@ async function getDocumentSymbols(uri) {
       }
       const range = rangeFromOffsets(matchIndex, endOffset, lineOffsets);
       const selectionRange = rangeFromOffsets(nameOffset, nameOffset + name.length, lineOffsets);
-      symbols.push({ name, range, selectionRange, children: [] });
+      symbols.push({ name, range, selectionRange, kind: 12, children: [] });
     }
   }
 

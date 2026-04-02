@@ -1,6 +1,6 @@
 ---
 name: lsprag
-description: Semantic code analysis for AI agents — build definition trees, find callers, and map call chains across TypeScript, JavaScript, Go, and Python. Use when asked to understand what a function calls, trace dependencies, or analyze code structure before editing. Works offline with no LSP server required.
+description: Semantic code analysis for AI agents — build definition trees, find callers, and map call chains across TypeScript, JavaScript, Go, and Python. Use when asked to understand what a function calls, trace dependencies, or analyze code structure before editing.
 license: LICENSE
 ---
 
@@ -57,7 +57,7 @@ ln -sf ~/.local/lsprag-pylsp-venv/bin/pylsp ~/.local/bin/pylsp
 
 `lsprag` is a code analysis CLI. It analyzes source files to map function call trees and dependencies.
 
-- **Offline-first**: Regex-based analysis works with no language server. Set `LSPRAG_LSP_PROVIDER` for cross-file LSP accuracy.
+- **LSP-first for token analysis**: `token-defs` / `token-analysis` require `LSPRAG_LSP_PROVIDER`. If unavailable, use shell tools (`ls`, `rg`) for manual tracing.
 - **Supported languages**: TypeScript, JavaScript (`.ts`, `.js`), Go (`.go`), Python (`.py`)
 
 ## Tool Selection
@@ -66,9 +66,10 @@ ln -sf ~/.local/lsprag-pylsp-venv/bin/pylsp ~/.local/bin/pylsp
 |------|----------------------|--------|
 | What does function X call? | `grep` + manual tracing | `lsprag def-tree --file <f> --symbol <name>` |
 | Read a function's full source | `Read` or `grep` for body | `lsprag retrieve-def --file <f> --symbol <name>` |
-| Jump to definition from a call site | (open file manually) | `lsprag retrieve-def --file <f> --symbol <name> --location <line>:<col>` |
+| Jump to definition from a call site | (open file manually) | `lsprag retrieve-def --file <f> --location <line>:<col>` |
+| Load all definitions in a line slice | inspect each line manually | `lsprag retrieve-def --file <f> --line-range <start:end>` |
 | What does a function depend on? | Read and trace manually | `lsprag token-defs --file <f> --symbol <name>` |
-| Quick text search | _(still appropriate)_ | `grep -rn <name> . --include="*.ts"` |
+| Quick text search | _(still appropriate)_ | `rg -n <name> .` |
 
 Prefer `lsprag` commands over `grep + Read` when the goal is understanding code structure or dependencies.
 
@@ -108,20 +109,30 @@ If the symbol is not found, `lsprag` prints all detected symbols — use that li
 
 ---
 
-### retrieve-def: Get a Symbol's Full Source
+### retrieve-def: Get Symbol Definition Source
 
 Return the complete source code of a symbol's definition.
 
-**By name** — finds the symbol definition directly in the file:
+**By name** — finds one or more symbol definitions directly in the file:
 
 ```bash
-lsprag retrieve-def --file <absolute_path> --symbol <name>
+lsprag retrieve-def --file <absolute_path> --symbol <name[,name2,...]>
+# or repeat --symbol:
+lsprag retrieve-def --file <absolute_path> --symbol <name> --symbol <name2>
 ```
 
 **By location** — "go-to-definition": resolves the symbol at a given line/column (useful when reading a call site):
 
 ```bash
-lsprag retrieve-def --file <absolute_path> --symbol <name> --location <line>:<col>
+lsprag retrieve-def --file <absolute_path> --location <line>:<col>
+```
+
+**By line range** — resolves all unique symbol definitions used in a line slice (1-indexed, inclusive):
+
+```bash
+lsprag retrieve-def --file <absolute_path> --line-range <start:end>
+# optional filter:
+lsprag retrieve-def --file <absolute_path> --line-range <start:end> --symbol <name[,name2,...]>
 ```
 
 `--location` accepts 1-indexed line and column (matching editor line numbers).
@@ -129,8 +140,9 @@ lsprag retrieve-def --file <absolute_path> --symbol <name> --location <line>:<co
 | Arg | Description | Required |
 |-----|-------------|----------|
 | `--file` | Absolute path to source file | Yes |
-| `--symbol` | Symbol name to look up | Yes |
+| `--symbol` | Symbol name(s), comma-separated or repeated flag | No (required when no `--location` and no `--line-range`) |
 | `--location` | `<line>:<col>` of a usage site (1-indexed) | No |
+| `--line-range` | `<start:end>` inclusive lines to scan for symbol usages | No |
 
 **Example — get a function body:**
 
@@ -149,10 +161,18 @@ function handleRequest(req, res) {
 **Example — go to definition of a call at a specific location:**
 
 ```bash
-lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody --location 18:15
+lsprag retrieve-def --file "$(realpath src/server.ts)" --location 18:15
 ```
 
 Returns the full source of `parseBody` as defined (possibly in another file if using a real LSP provider).
+
+**Example — load all definitions referenced in a range:**
+
+```bash
+lsprag retrieve-def --file "$(realpath src/server.ts)" --line-range 120:180
+```
+
+This prints each resolved definition once.
 
 ---
 
@@ -160,8 +180,14 @@ Returns the full source of `parseBody` as defined (possibly in another file if u
 
 List every identifier token within a symbol body and show where each is defined. Useful for understanding what a function depends on.
 
+`token-defs` and `token-analysis` are **LSP-only**. Set `LSPRAG_LSP_PROVIDER` (or `LSPRAG_PROVIDER_PATH`) to a valid provider module.
+
 ```bash
 lsprag token-defs --file <absolute_path> --symbol <name>
+# optional: restrict output rows to token lines in a sub-range
+lsprag token-defs --file <absolute_path> --symbol <name> --line-range <start:end>
+# analysis mode:
+lsprag token-analysis --file <absolute_path> --symbol <name> --line-range <start:end>
 ```
 
 | Arg | Description | Required |
@@ -181,7 +207,7 @@ Tokens in 'handleRequest' (src/server.ts:15:10):
 
 Each row shows: location inside the function → token name → definition location.
 
-Only tokens with resolved definitions are shown. In regex mode, only same-file function definitions resolve; cross-file requires `LSPRAG_LSP_PROVIDER`.
+Only tokens with resolved definitions are shown. If LSP is unavailable, use shell tools such as `ls -la` and `rg -n`.
 
 ## Best Practices
 
@@ -209,8 +235,8 @@ lsprag def-tree --file "$(realpath src/server.ts)" --symbol targetFunction --dep
 # See all dependencies it references
 lsprag token-defs --file "$(realpath src/server.ts)" --symbol targetFunction
 
-# Find callers (grep is still fine for this)
-grep -rn "targetFunction" . --include="*.ts" -A1 -B1
+# Find callers
+rg -n "targetFunction" .
 ```
 
 ### Reading a Definition from a Call Site
