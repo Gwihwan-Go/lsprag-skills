@@ -1,6 +1,6 @@
 # lsprag-skills
 
-Portable LSP code analysis for AI agents — build definition trees, retrieve source, trace dependencies, and deep-expand call graphs.
+Portable LSP code analysis for AI agents — retrieve source, trace dependencies, and deep-expand call graphs.
 
 ## What Is This?
 
@@ -8,13 +8,13 @@ A set of `lsprag` skills that give AI agents (Claude Code, OpenCode, etc.) a `ls
 
 | Command | What it does |
 |---------|-------------|
-| `lsprag def-tree` | Build a call tree from a function (what does it call, recursively?) |
+| `lsprag def-tree` | Temporarily disabled |
 | `lsprag retrieve-def` | Get the full source of any symbol, by name or by call-site location |
 | `lsprag token-defs` | Decompose a symbol into tokens and show where each is defined |
 | `lsprag token-analysis` | Token-defs analysis mode: markdown links + definition source blocks |
 | `lsprag deep-think` | BFS expansion: retrieve source + deps for a symbol and all its transitive dependencies |
 
-**No VS Code required.** `def-tree`, `retrieve-def`, and `deep-think` work without an external LSP server.  
+**No VS Code required.** `retrieve-def` and `deep-think` work without an external LSP server.  
 `token-defs` and `token-analysis` are LSP-only; if LSP is unavailable, use shell tools (`ls`, `rg`) for manual tracing.
 
 **Supported languages:** TypeScript, JavaScript, Go, Python
@@ -56,26 +56,15 @@ bash scripts/update.sh
 
 ```bash
 lsprag --help
-lsprag def-tree --file "$LSPRAG_SKILLS_ROOT/tests/fixtures/def-tree-sample.ts" --symbol foo
+lsprag retrieve-def --file "$LSPRAG_SKILLS_ROOT/tests/fixtures/def-tree-sample.ts" --symbol foo
 ```
 
 ## CLI Usage
 
-### def-tree — Call Tree
+### def-tree — Temporarily Disabled
 
-What does a function call, recursively?
-
-```bash
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest --depth 3
-```
-
-```
-handleRequest
-├─ parseBody
-│  └─ readStream
-└─ sendResponse
-   └─ formatJSON
-```
+`lsprag def-tree` is currently disabled.
+Use `lsprag token-analysis` or `lsprag deep-think` for dependency understanding.
 
 ### retrieve-def — Full Source of Symbol Definitions
 
@@ -189,7 +178,7 @@ Start at `--depth 1` for initial exploration; increase for deeper understanding.
 
 | Goal | Use |
 |------|-----|
-| What does function X call? | `lsprag def-tree` |
+| What does function X call? | `lsprag deep-think --depth <n>` |
 | Read one or more symbol definitions | `lsprag retrieve-def --symbol <a,b,...>` |
 | Jump to definition from a call site | `lsprag retrieve-def --location <line>:<col>` |
 | Load all definitions used in specific lines | `lsprag retrieve-def --line-range <start:end>` |
@@ -225,7 +214,7 @@ claude plugin install lsprag
 Once installed, Claude invokes `lsprag` automatically when you describe code analysis tasks:
 
 ```
-Show me the call tree for handleRequest in src/server.ts
+Show me all definitions used in lines 120:180 of src/server.ts
 Understand everything handleRequest depends on before I refactor it
 ```
 
@@ -266,13 +255,13 @@ ln -sf ~/.local/lsprag-pylsp-venv/bin/pylsp ~/.local/bin/pylsp
 ```
 scripts/
   lsprag               shell wrapper — the installed CLI
-  def-tree-cli.ts      build a call tree
+  def-tree-cli.ts      temporarily disabled
   retrieve-def-cli.ts  retrieve a symbol's full source
   token-defs-cli.ts    decompose a symbol into token dependencies
   deep-think-cli.ts    BFS expansion across all transitive dependencies
   update.sh            verify/repair installation
 skills/
-  lsprag/              Claude Code skill (def-tree, retrieve-def, token-defs)
+  lsprag/              Claude Code skill (retrieve-def, token-defs)
     SKILL.md
   lsprag-deep-think/   Claude Code skill (deep-think)
     SKILL.md
@@ -299,5 +288,5 @@ bash $LSPRAG_SKILLS_ROOT/scripts/update.sh
 
 ```bash
 npm test                 # all CLI tests (no LSP server needed)
-npm run test:opencode    # OpenCode integration (requires opencode CLI)
+npm run test:opencode    # OpenCode integration (def-tree coverage; currently disabled in runtime CLI)
 ```

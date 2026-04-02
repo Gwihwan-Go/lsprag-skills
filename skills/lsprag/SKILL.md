@@ -1,6 +1,6 @@
 ---
 name: lsprag
-description: Semantic code analysis for AI agents — build definition trees, find callers, and map call chains across TypeScript, JavaScript, Go, and Python. Use when asked to understand what a function calls, trace dependencies, or analyze code structure before editing.
+description: Semantic code analysis for AI agents — retrieve definitions, analyze token dependencies, and expand dependency layers across TypeScript, JavaScript, Go, and Python. Use when asked to trace dependencies or analyze code structure before editing. Note: `def-tree` is temporarily disabled.
 license: LICENSE
 ---
 
@@ -55,7 +55,7 @@ ln -sf ~/.local/lsprag-pylsp-venv/bin/pylsp ~/.local/bin/pylsp
 
 ## Overview
 
-`lsprag` is a code analysis CLI. It analyzes source files to map function call trees and dependencies.
+`lsprag` is a code analysis CLI for definition lookup and dependency analysis.
 
 - **LSP-first for token analysis**: `token-defs` / `token-analysis` require `LSPRAG_LSP_PROVIDER`. If unavailable, use shell tools (`ls`, `rg`) for manual tracing.
 - **Supported languages**: TypeScript, JavaScript (`.ts`, `.js`), Go (`.go`), Python (`.py`)
@@ -64,7 +64,7 @@ ln -sf ~/.local/lsprag-pylsp-venv/bin/pylsp ~/.local/bin/pylsp
 
 | Task | Traditional approach | lsprag |
 |------|----------------------|--------|
-| What does function X call? | `grep` + manual tracing | `lsprag def-tree --file <f> --symbol <name>` |
+| What does function X call? | `grep` + manual tracing | `lsprag deep-think --file <f> --symbol <name> --depth <n>` |
 | Read a function's full source | `Read` or `grep` for body | `lsprag retrieve-def --file <f> --symbol <name>` |
 | Jump to definition from a call site | (open file manually) | `lsprag retrieve-def --file <f> --location <line>:<col>` |
 | Load all definitions in a line slice | inspect each line manually | `lsprag retrieve-def --file <f> --line-range <start:end>` |
@@ -75,37 +75,10 @@ Prefer `lsprag` commands over `grep + Read` when the goal is understanding code 
 
 ## Commands
 
-### def-tree: Build a Call Tree
+### def-tree: Temporarily Disabled
 
-Show which functions a symbol calls, recursively.
-
-```bash
-lsprag def-tree --file <absolute_path> --symbol <name> [--depth <n>]
-```
-
-| Arg | Description | Required |
-|-----|-------------|----------|
-| `--file` | Absolute path to source file | Yes |
-| `--symbol` | Function or method name | Yes |
-| `--depth` | Max recursion depth (default: 3) | No |
-
-**Always use absolute paths:**
-
-```bash
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest --depth 3
-```
-
-**Example output:**
-
-```
-handleRequest
-├─ parseBody
-│  └─ readStream
-└─ sendResponse
-   └─ formatJSON
-```
-
-If the symbol is not found, `lsprag` prints all detected symbols — use that list to find the correct name.
+`lsprag def-tree` is temporarily disabled.
+Use `lsprag deep-think` for layered dependency traversal.
 
 ---
 
@@ -214,14 +187,14 @@ Only tokens with resolved definitions are shown. If LSP is unavailable, use shel
 ### Understanding What a Function Does
 
 ```bash
-# Step 1: map the call tree
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest
-
-# Step 2: see what tokens it depends on
+# Step 1: see what tokens it depends on
 lsprag token-defs --file "$(realpath src/server.ts)" --symbol handleRequest
 
-# Step 3: read the body of a key dependency
+# Step 2: read the body of a key dependency
 lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody
+
+# Step 3: expand dependency layers if needed
+lsprag deep-think --file "$(realpath src/server.ts)" --symbol handleRequest --depth 2
 ```
 
 **Why**: start with structure before loading file content — it shows you what matters.
@@ -229,11 +202,11 @@ lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody
 ### Before Modifying a Function
 
 ```bash
-# Check the call tree for impact scope
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol targetFunction --depth 4
-
 # See all dependencies it references
 lsprag token-defs --file "$(realpath src/server.ts)" --symbol targetFunction
+
+# Optionally expand transitive dependencies
+lsprag deep-think --file "$(realpath src/server.ts)" --symbol targetFunction --depth 3
 
 # Find callers
 rg -n "targetFunction" .
@@ -249,23 +222,23 @@ lsprag retrieve-def --file "$(realpath src/server.ts)" --symbol parseBody --loca
 ### Exploring an Unfamiliar Codebase
 
 ```bash
-# Map the entry point
-lsprag def-tree --file "$(realpath src/main.ts)" --symbol main --depth 5
-
-# See what it directly depends on
+# See direct dependencies
 lsprag token-defs --file "$(realpath src/main.ts)" --symbol main
+
+# Expand dependencies by layers
+lsprag deep-think --file "$(realpath src/main.ts)" --symbol main --depth 3
 ```
 
 ### Go Codebases
 
 ```bash
-lsprag def-tree     --file "$(realpath main.go)" --symbol HandleRequest --depth 3
 lsprag retrieve-def --file "$(realpath main.go)" --symbol HandleRequest
 lsprag token-defs   --file "$(realpath main.go)" --symbol HandleRequest
+lsprag deep-think   --file "$(realpath main.go)" --symbol HandleRequest --depth 2
 ```
 
 ## Notes
 
-- Regex mode analyzes only the given file. For cross-file call resolution, configure `LSPRAG_LSP_PROVIDER`.
+- Regex mode analyzes only the given file. For cross-file resolution, configure `LSPRAG_LSP_PROVIDER`.
 - Arrow functions and class methods are detected in TypeScript/JavaScript.
-- `def-tree` detects cycles and marks them to prevent infinite recursion.
+- `def-tree` is temporarily disabled.

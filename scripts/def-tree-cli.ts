@@ -16,6 +16,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildDefTree, prettyPrintDefTree } from "../src/treeCore.js";
 
+console.error("[Disabled] def-tree is temporarily unsupported.");
+console.error("Use retrieve-def, token-defs, or deep-think instead.");
+process.exit(2);
+
 // ── arg parsing ──────────────────────────────────────────────────────────────
 function parseArgs(argv: string[]): Record<string, string> {
   const result: Record<string, string> = {};

@@ -13,7 +13,7 @@
     "test:deps": "tsx tests/skill-only.deps.test.ts",
     "test:opencode": "tsx tests/opencode/def-tree.opencode.test.ts",
     "test:cli": "tsx tests/cli.test.ts",
-    "test": "npm run test:core && npm run test:core-go && npm run test:retrieve-defs && npm run test:token-defs && npm run test:deps && npm run test:cli"
+    "test": "npm run test:retrieve-defs && npm run test:token-defs && npm run test:deps && npm run test:cli"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

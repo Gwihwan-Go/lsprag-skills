@@ -1,6 +1,5 @@
 /**
- * cli.test.ts — verifies that the def-tree-cli.ts script works end-to-end
- * for both TypeScript and Go fixtures.
+ * cli.test.ts — verifies CLI behavior for enabled lsprag commands.
  */
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -27,58 +26,28 @@ function withMockLspEnv(): NodeJS.ProcessEnv {
   };
 }
 
-function runCli(file: string, symbol: string, depth = 3): string {
-  const result = spawnSync(
-    "npx",
-    ["tsx", cliScript, "--file", file, "--symbol", symbol, "--depth", String(depth)],
-    { encoding: "utf8", cwd: repoRoot }
-  );
-  if (result.status !== 0) {
-    throw new Error(`CLI exited with ${result.status}:\n${result.stderr}`);
-  }
-  return result.stdout;
-}
-
-// TypeScript fixture: foo -> bar -> (qux, baz)
-{
-  const output = runCli(fixtureTs, "foo");
-  assert(output.includes("foo"), `Expected "foo" in output:\n${output}`);
-  assert(output.includes("bar"), `Expected "bar" in output:\n${output}`);
-  assert(output.includes("baz"), `Expected "baz" in output:\n${output}`);
-  assert(output.includes("qux"), `Expected "qux" in output:\n${output}`);
-  console.log("PASS: CLI TypeScript fixture (foo -> bar -> qux, baz)");
-}
-
-// Go fixture: same structure
-{
-  const output = runCli(fixtureGo, "foo");
-  assert(output.includes("foo"), `Expected "foo" in Go output:\n${output}`);
-  assert(output.includes("bar"), `Expected "bar" in Go output:\n${output}`);
-  assert(output.includes("baz"), `Expected "baz" in Go output:\n${output}`);
-  console.log("PASS: CLI Go fixture (foo -> bar -> baz)");
-}
-
-// Error: symbol not found
+// ── def-tree disabled: direct CLI script ─────────────────────────────────────
 {
   const result = spawnSync(
     "npx",
-    ["tsx", cliScript, "--file", fixtureTs, "--symbol", "nonexistent"],
+    ["tsx", cliScript, "--file", fixtureTs, "--symbol", "foo"],
     { encoding: "utf8", cwd: repoRoot }
   );
-  assert.equal(result.status, 1, "Expected exit code 1 for missing symbol");
-  assert(result.stderr.includes("not found"), `Expected "not found" in stderr:\n${result.stderr}`);
-  console.log("PASS: CLI error on missing symbol");
+  assert.equal(result.status, 2, `Expected disabled exit code for def-tree script:\n${result.stderr}`);
+  assert(result.stderr.includes("[Disabled]"), `Expected disabled message:\n${result.stderr}`);
+  console.log("PASS: def-tree direct CLI is disabled");
 }
 
-// Error: file not found
+// ── def-tree disabled: wrapper command ───────────────────────────────────────
 {
   const result = spawnSync(
-    "npx",
-    ["tsx", cliScript, "--file", "/nonexistent/file.ts", "--symbol", "foo"],
+    "bash",
+    [lspragScript, "def-tree", "--file", fixtureTs, "--symbol", "foo"],
     { encoding: "utf8", cwd: repoRoot }
   );
-  assert.equal(result.status, 1, "Expected exit code 1 for missing file");
-  console.log("PASS: CLI error on missing file");
+  assert.equal(result.status, 2, `Expected disabled exit code for wrapper def-tree:\n${result.stderr}`);
+  assert(result.stderr.includes("temporarily disabled"), `Expected disabled message:\n${result.stderr}`);
+  console.log("PASS: def-tree wrapper command is disabled");
 }
 
 // ── retrieve-def: by name ─────────────────────────────────────────────────────

@@ -15,7 +15,9 @@ shift 2>/dev/null || true
 
 case "$CMD" in
   def-tree|deftree|tree)
-    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/def-tree-cli.ts" "$@"
+    echo "lsprag: command 'def-tree' is temporarily disabled." >&2
+    echo "Use 'retrieve-def', 'token-defs', or 'deep-think' instead." >&2
+    exit 2
     ;;
   retrieve-def|retrieve|def)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/retrieve-def-cli.ts" "$@"
@@ -40,7 +42,7 @@ Usage:
   lsprag <command> [options]
 
 Commands:
-  def-tree      Build a call tree: what does a function call, recursively?
+  def-tree      Temporarily disabled
   retrieve-def  Get the full source of a symbol's definition
   token-defs    List tokens inside a symbol with their definition locations
   token-analysis Run token-defs in analysis mode (markdown links + definition sources)
@@ -53,7 +55,6 @@ Options:
 Run 'lsprag <command> --help' for command-specific options.
 
 Examples:
-  lsprag def-tree     --file src/server.ts   --symbol handleRequest
   lsprag retrieve-def --file src/server.ts   --symbol handleRequest
   lsprag retrieve-def --file src/server.ts   --symbol parseBody,readStream
   lsprag retrieve-def --file src/server.ts   --location 42:15
@@ -61,7 +62,6 @@ Examples:
   lsprag token-defs   --file src/server.ts   --symbol handleRequest
   lsprag token-analysis --file src/server.ts --symbol handleRequest
   lsprag deep-think   --file src/server.ts   --symbol handleRequest --depth 2
-  lsprag def-tree     --file "$(realpath src/foo.ts)" --symbol myFn --depth 5
 HELP
     ;;
   *)
