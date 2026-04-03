@@ -6,21 +6,7 @@ license: LICENSE
 
 # LSPRAG Deep Think — BFS Code Understanding
 
-## IMPORTANT: PREREQUISITE
-
-Before using this skill, verify the installation:
-
-```bash
-bash "$LSPRAG_SKILLS_ROOT/scripts/update.sh"
-```
-
-Confirm the CLI is available:
-
-```bash
-lsprag --help
-```
-
-**IF THE CLI IS NOT WORKING, DO NOT PROCEED. Ask the user to run the installer first.**
+If `lsprag` is not found, ask the user to run `bash install.sh` from the lsprag-skills root directory.
 
 ## Overview
 

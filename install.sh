@@ -1,28 +1,34 @@
 #!/usr/bin/env bash
-# install.sh — lsprag-skills install helper
-# Sets up the skills for Claude Code and/or OpenCode automatically.
+# install.sh — one-time lsprag-skills setup
+#
+# Installs: npm deps, lsprag CLI, env vars, LSP servers for detected languages,
+# and configures Claude Code / OpenCode if present.
+#
+# Safe to re-run — every step is idempotent.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BOLD='\033[1m'
 NC='\033[0m'
 
 ok()   { echo -e "${GREEN}✓${NC} $*"; }
 warn() { echo -e "${YELLOW}!${NC} $*"; }
 err()  { echo -e "${RED}✗${NC} $*"; }
+header() { echo -e "\n${BOLD}==> $*${NC}"; }
 
 echo "lsprag-skills installer"
 echo "Repo: $REPO_ROOT"
-echo ""
 
 # ── 1. npm install ────────────────────────────────────────────────────────────
-echo "==> Installing npm dependencies..."
+header "Installing npm dependencies"
 npm install --prefix "$REPO_ROOT" --silent
 ok "npm install done"
 
-# ── 2. LSPRAG_SKILLS_ROOT env var ─────────────────────────────────────────────
+# ── 2. LSPRAG_SKILLS_ROOT env var ────────────────────────────────────────────
+header "Setting environment variables"
 export LSPRAG_SKILLS_ROOT="$REPO_ROOT"
 
 SHELL_RC=""
@@ -40,179 +46,129 @@ if [ -n "$SHELL_RC" ]; then
     ok "LSPRAG_SKILLS_ROOT already in $SHELL_RC"
   fi
 else
-  warn "No shell rc file found. Set LSPRAG_SKILLS_ROOT manually:"
+  warn "No shell rc file found. Set manually:"
   warn "  export LSPRAG_SKILLS_ROOT=\"$REPO_ROOT\""
 fi
 
-# ── 3. LSPRAG_LSP_PROVIDER env var ────────────────────────────────────────────
+# ── 3. LSPRAG_LSP_PROVIDER env var ──────────────────────────────────────────
 PROVIDER_PATH="$REPO_ROOT/providers/regex-provider.mjs"
 export LSPRAG_LSP_PROVIDER="$PROVIDER_PATH"
 
 if [ -n "$SHELL_RC" ]; then
   if ! grep -q "LSPRAG_LSP_PROVIDER" "$SHELL_RC"; then
-    echo "" >> "$SHELL_RC"
-    echo "# lsprag-skills provider" >> "$SHELL_RC"
     echo "export LSPRAG_LSP_PROVIDER=\"$PROVIDER_PATH\"" >> "$SHELL_RC"
     ok "Added LSPRAG_LSP_PROVIDER to $SHELL_RC"
   else
     ok "LSPRAG_LSP_PROVIDER already in $SHELL_RC"
   fi
-else
-  warn "No shell rc file found. Set LSPRAG_LSP_PROVIDER manually:"
-  warn "  export LSPRAG_LSP_PROVIDER=\"$PROVIDER_PATH\""
 fi
 
-# ── 4. Check LSP servers ──────────────────────────────────────────────────────
-echo ""
-echo "==> Checking LSP servers..."
-found_any=0
-if command -v gopls &>/dev/null; then
-  ok "gopls found: $(command -v gopls)"
-  found_any=1
-else
-  warn "gopls not found (Go LSP)"
-fi
-if command -v tsserver &>/dev/null; then
-  ok "tsserver found: $(command -v tsserver)"
-  found_any=1
-else
-  warn "tsserver not found (TypeScript LSP)"
-fi
-if command -v pylsp &>/dev/null; then
-  ok "pylsp found: $(command -v pylsp)"
-  found_any=1
-else
-  warn "pylsp not found (Python LSP)"
-fi
-if [ "$found_any" -eq 0 ]; then
-  warn "No LSP servers detected. Regex provider will be used by default."
-  warn "To install LSP servers automatically: LSPRAG_INSTALL_LSP=1 bash $REPO_ROOT/install.sh"
-fi
-
-# ── 4b. Optional LSP install ──────────────────────────────────────────────────
-if [ "${LSPRAG_INSTALL_LSP:-}" = "1" ]; then
-  echo ""
-  echo "==> Installing LSP servers (optional)..."
-  mkdir -p "$HOME/.local/bin"
-
-  # Go (gopls)
-  if ! command -v gopls &>/dev/null; then
-    if command -v apt-get &>/dev/null; then
-      if [ "$(id -u)" -eq 0 ]; then
-        apt-get update -y >/dev/null 2>&1 || true
-        if apt-get install -y gopls >/dev/null 2>&1; then
-          ok "Installed gopls (apt)"
-        else
-          warn "Failed to install gopls via apt"
-        fi
-      elif command -v sudo &>/dev/null; then
-        sudo apt-get update -y >/dev/null 2>&1 || true
-        if sudo apt-get install -y gopls >/dev/null 2>&1; then
-          ok "Installed gopls (apt)"
-        else
-          warn "Failed to install gopls via apt"
-        fi
-      else
-        warn "gopls not installed (need sudo/root or Go toolchain)"
-      fi
-    fi
-
-    if ! command -v gopls &>/dev/null && command -v go &>/dev/null; then
-      if GOBIN="$HOME/.local/bin" GOPATH="$HOME/.local/go" \
-        go install golang.org/x/tools/gopls@latest >/dev/null 2>&1; then
-        ok "Installed gopls (go install)"
-      else
-        warn "Failed to install gopls via go install"
-      fi
-    fi
-  else
-    ok "gopls already installed"
-  fi
-
-  # TypeScript (tsserver)
-  if ! command -v tsserver &>/dev/null; then
-    if command -v npm &>/dev/null; then
-      if npm install -g typescript --prefix "$HOME/.local" --silent; then
-        ok "Installed tsserver (npm)"
-      else
-        warn "Failed to install tsserver via npm"
-      fi
-    else
-      warn "npm not found; cannot install tsserver"
-    fi
-  else
-    ok "tsserver already installed"
-  fi
-
-  # Python (pylsp)
-  if ! command -v pylsp &>/dev/null; then
-    if command -v python3 &>/dev/null; then
-      VENV="$HOME/.local/lsprag-pylsp-venv"
-      if python3 -m venv "$VENV" >/dev/null 2>&1; then
-        if "$VENV/bin/pip" install --quiet python-lsp-server; then
-          ln -sf "$VENV/bin/pylsp" "$HOME/.local/bin/pylsp"
-          ok "Installed pylsp (venv)"
-        else
-          warn "Failed to install pylsp in venv"
-        fi
-      else
-        warn "Failed to create Python venv for pylsp"
-      fi
-    else
-      warn "python3 not found; cannot install pylsp"
-    fi
-  else
-    ok "pylsp already installed"
-  fi
-fi
-
-# ── 5. Install lsprag binary ──────────────────────────────────────────────────
-echo ""
-echo "==> Installing lsprag CLI..."
+# ── 4. Install lsprag CLI ────────────────────────────────────────────────────
+header "Installing lsprag CLI"
 LSPRAG_BIN="$HOME/.local/bin/lsprag"
 chmod +x "$REPO_ROOT/scripts/lsprag"
 mkdir -p "$(dirname "$LSPRAG_BIN")"
 ln -sf "$REPO_ROOT/scripts/lsprag" "$LSPRAG_BIN"
 ok "Installed lsprag → $LSPRAG_BIN"
-
-# Ensure ~/.local/bin is in PATH for this session
 export PATH="$HOME/.local/bin:$PATH"
 
-# Add to shell rc if missing
 if [ -n "$SHELL_RC" ]; then
   if ! grep -q 'local/bin' "$SHELL_RC"; then
-    echo "" >> "$SHELL_RC"
-    echo '# lsprag-skills: add ~/.local/bin to PATH' >> "$SHELL_RC"
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
     ok "Added ~/.local/bin to PATH in $SHELL_RC"
   fi
 fi
 
-# ── 6. Verify lsprag works ────────────────────────────────────────────────────
-echo ""
-echo "==> Testing lsprag CLI..."
-CLI_OUTPUT=$(LSPRAG_SKILLS_ROOT="$REPO_ROOT" "$REPO_ROOT/scripts/lsprag" def-tree \
+# ── 5. Smoke test ────────────────────────────────────────────────────────────
+header "Smoke test"
+CLI_OUTPUT=$(LSPRAG_SKILLS_ROOT="$REPO_ROOT" "$REPO_ROOT/scripts/lsprag" getDefinition \
   --file "$REPO_ROOT/tests/fixtures/def-tree-sample.ts" \
-  --symbol foo 2>&1)
+  --symbol bar 2>&1) || true
 if echo "$CLI_OUTPUT" | grep -q "bar"; then
-  ok "lsprag def-tree works"
+  ok "lsprag getDefinition works"
 else
-  err "lsprag test failed. Output: $CLI_OUTPUT"
+  err "lsprag smoke test failed. Output: $CLI_OUTPUT"
 fi
 
-# ── 7. Claude Code ────────────────────────────────────────────────────────────
-if command -v claude &>/dev/null; then
-  echo ""
-  echo "==> Setting up Claude Code..."
+# ── 6. Install LSP servers ───────────────────────────────────────────────────
+header "Installing LSP servers"
 
-  # Validate plugin structure
-  if claude plugin validate "$REPO_ROOT" 2>&1 | grep -qi "passed\|valid"; then
-    ok "Plugin structure valid"
-  else
-    warn "Plugin validation inconclusive — proceeding"
+# Detect which languages are used in the current project (parent of skill root,
+# or the directory the user is in when running install.sh).
+PROJECT_ROOT="${LSPRAG_PROJECT_ROOT:-$(pwd)}"
+
+detect_lang() {
+  local ext="$1" name="$2"
+  # Check in skill repo fixtures + in the user's project
+  if find "$REPO_ROOT" -maxdepth 4 -name "*.$ext" -print -quit 2>/dev/null | grep -q .; then
+    return 0
   fi
+  if [ "$PROJECT_ROOT" != "$REPO_ROOT" ] && \
+     find "$PROJECT_ROOT" -maxdepth 4 -name "*.$ext" -not -path "*/node_modules/*" -print -quit 2>/dev/null | grep -q .; then
+    return 0
+  fi
+  return 1
+}
 
-  # Add shell alias for persistent plugin-dir
+install_count=0
+skip_count=0
+
+# Go
+if detect_lang "go" "Go"; then
+  echo "  Detected Go files — installing gopls..."
+  if bash "$REPO_ROOT/scripts/install-lsp-go.sh"; then
+    install_count=$((install_count + 1))
+  fi
+elif command -v go &>/dev/null; then
+  echo "  Go toolchain found — installing gopls..."
+  if bash "$REPO_ROOT/scripts/install-lsp-go.sh"; then
+    install_count=$((install_count + 1))
+  fi
+else
+  skip_count=$((skip_count + 1))
+fi
+
+# TypeScript / JavaScript
+if detect_lang "ts" "TypeScript" || detect_lang "js" "JavaScript"; then
+  echo "  Detected TS/JS files — installing tsserver..."
+  if bash "$REPO_ROOT/scripts/install-lsp-ts.sh"; then
+    install_count=$((install_count + 1))
+  fi
+elif command -v node &>/dev/null; then
+  echo "  Node.js found — installing tsserver..."
+  if bash "$REPO_ROOT/scripts/install-lsp-ts.sh"; then
+    install_count=$((install_count + 1))
+  fi
+else
+  skip_count=$((skip_count + 1))
+fi
+
+# Python
+if detect_lang "py" "Python"; then
+  echo "  Detected Python files — installing pylsp..."
+  if bash "$REPO_ROOT/scripts/install-lsp-python.sh"; then
+    install_count=$((install_count + 1))
+  fi
+elif command -v python3 &>/dev/null; then
+  echo "  Python3 found — installing pylsp..."
+  if bash "$REPO_ROOT/scripts/install-lsp-python.sh"; then
+    install_count=$((install_count + 1))
+  fi
+else
+  skip_count=$((skip_count + 1))
+fi
+
+if [ "$install_count" -gt 0 ]; then
+  ok "$install_count LSP server(s) installed"
+fi
+if [ "$skip_count" -gt 0 ]; then
+  warn "$skip_count language(s) not detected — skipped their LSP servers"
+  warn "Install individually later: bash scripts/install-lsp-{go,ts,python}.sh"
+fi
+
+# ── 7. Claude Code ───────────────────────────────────────────────────────────
+if command -v claude &>/dev/null; then
+  header "Setting up Claude Code"
   if [ -n "$SHELL_RC" ]; then
     if ! grep -q "lsprag.*plugin-dir" "$SHELL_RC"; then
       echo "" >> "$SHELL_RC"
@@ -223,69 +179,41 @@ if command -v claude &>/dev/null; then
       ok "Claude alias already configured in $SHELL_RC"
     fi
   fi
-
-  ok "Claude Code ready. Start a new shell, then run:"
-  ok "  claude"
-  ok "  /lsprag --file path/to/file.ts --symbol myFn"
-  ok "  (or just describe your task and Claude will invoke lsprag automatically)"
-else
-  warn "Claude Code not found. To install: https://claude.ai/code"
-  warn "After installing, add to $SHELL_RC:"
-  warn "  alias claude='claude --plugin-dir \"$REPO_ROOT\"'"
+  ok "Claude Code ready"
 fi
 
-# ── 8. OpenCode ────────────────────────────────────────────────────────────────
+# ── 8. OpenCode ──────────────────────────────────────────────────────────────
 OPENCODE_TOOLS="$HOME/.config/opencode/tools"
 if command -v opencode &>/dev/null || [ -d "$HOME/.config/opencode" ]; then
-  echo ""
-  echo "==> Setting up OpenCode..."
+  header "Setting up OpenCode"
   mkdir -p "$OPENCODE_TOOLS"
-
-  # Install @opencode-ai/plugin if missing
   PLUGIN_PATH="$HOME/.config/opencode/node_modules/@opencode-ai/plugin"
   if [ ! -d "$PLUGIN_PATH" ]; then
-    echo "    Installing @opencode-ai/plugin..."
     npm install --prefix "$HOME/.config/opencode" @opencode-ai/plugin --silent 2>/dev/null && \
-      ok "  Installed @opencode-ai/plugin" || \
-      warn "  Could not install @opencode-ai/plugin. Run manually: npm install --prefix ~/.config/opencode @opencode-ai/plugin"
-  else
-    ok "  @opencode-ai/plugin already installed"
+      ok "Installed @opencode-ai/plugin" || \
+      warn "Could not install @opencode-ai/plugin"
   fi
-
-  cp "$REPO_ROOT/tools/lsprag_def_tree.ts" "$OPENCODE_TOOLS/lsprag_def_tree.ts"
-  ok "  Installed lsprag_def_tree → $OPENCODE_TOOLS/lsprag_def_tree.ts"
-  ok "OpenCode ready. Restart OpenCode, then use the lsprag_def_tree tool."
-else
-  warn "OpenCode not detected. To install: npm install -g opencode-ai"
-  warn "After installing, copy tool:"
-  warn "  mkdir -p ~/.config/opencode/tools"
-  warn "  cp $REPO_ROOT/tools/lsprag_def_tree.ts ~/.config/opencode/tools/"
+  if [ -f "$REPO_ROOT/tools/lsprag_def_tree.ts" ]; then
+    cp "$REPO_ROOT/tools/lsprag_def_tree.ts" "$OPENCODE_TOOLS/lsprag_def_tree.ts"
+    ok "Installed lsprag_def_tree → $OPENCODE_TOOLS/"
+  fi
+  ok "OpenCode ready"
 fi
 
-# ── 9. Summary ────────────────────────────────────────────────────────────────
+# ── 9. Summary ───────────────────────────────────────────────────────────────
 echo ""
 echo "============================================================"
 echo "Installation complete!"
 echo ""
-echo "IMPORTANT: Open a new terminal (or run: source $SHELL_RC)"
-echo "This activates LSPRAG_SKILLS_ROOT, LSPRAG_LSP_PROVIDER, and PATH."
+if [ -n "$SHELL_RC" ]; then
+  echo "Open a new terminal (or run: source $SHELL_RC)"
+fi
 echo ""
-echo "Quick test (after opening a new terminal):"
-echo "  lsprag def-tree \\"
+echo "Quick test:"
+echo "  lsprag getDefinition \\"
 echo "    --file \$LSPRAG_SKILLS_ROOT/tests/fixtures/def-tree-sample.ts \\"
-echo "    --symbol foo"
+echo "    --symbol bar"
 echo ""
-if command -v claude &>/dev/null; then
-  echo "In Claude Code (after opening a new terminal):"
-  echo "  claude"
-  echo "  /lsprag --file path/to/file.ts --symbol myFn"
-  echo ""
-fi
-if command -v opencode &>/dev/null; then
-  echo "In OpenCode:"
-  echo "  Use lsprag_def_tree tool with filePath and symbolName args"
-  echo ""
-fi
-echo "Verify setup anytime: bash $REPO_ROOT/scripts/update.sh"
-echo "Run all tests:        cd $REPO_ROOT && npm test"
+echo "Verify anytime:  bash $REPO_ROOT/scripts/update.sh"
+echo "Run all tests:   cd $REPO_ROOT && npm test"
 echo "============================================================"

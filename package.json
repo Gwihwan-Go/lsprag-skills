@@ -13,7 +13,10 @@
     "test:deps": "tsx tests/skill-only.deps.test.ts",
     "test:opencode": "tsx tests/opencode/def-tree.opencode.test.ts",
     "test:cli": "tsx tests/cli.test.ts",
-    "test": "npm run test:retrieve-defs && npm run test:token-defs && npm run test:deps && npm run test:cli"
+    "test:unified": "tsx tests/unified-commands.test.ts",
+    "test:hover": "tsx tests/hover-dispatch.core.test.ts",
+    "test:reference": "tsx tests/get-reference.core.test.ts",
+    "test": "npm run test:core && npm run test:core-go && npm run test:retrieve-defs && npm run test:token-defs && npm run test:deps && npm run test:cli && npm run test:unified && npm run test:hover && npm run test:reference"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

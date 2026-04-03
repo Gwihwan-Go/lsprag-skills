@@ -14,25 +14,34 @@ CMD="${1:-}"
 shift 2>/dev/null || true
 
 case "$CMD" in
-  def-tree|deftree|tree)
-    echo "lsprag: command 'def-tree' is temporarily disabled." >&2
-    echo "Use 'retrieve-def', 'token-defs', or 'deep-think' instead." >&2
+  def-tree)
+    echo "lsprag: def-tree is temporarily disabled." >&2
+    echo "Use getDefinition, getTokens, or deep-think instead." >&2
     exit 2
     ;;
-  retrieve-def|retrieve|def)
+  getDefinition)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/get-definition-cli.ts" "$@"
+    ;;
+  retrieve-def)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/retrieve-def-cli.ts" "$@"
     ;;
-  token-defs|tokendefs|tokens)
+  getTokens)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/get-tokens-cli.ts" "$@"
+    ;;
+  token-defs)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/token-defs-cli.ts" "$@"
     ;;
-  token-analysis|token_analysis|tokenanalysis|analysis)
-    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/token-defs-cli.ts" --analysis --full-source --format markdown "$@"
+  token-analysis)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/token-defs-cli.ts" "$@" --analysis --format markdown
     ;;
-  deep-think|deepthink|think)
+  getReference)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/get-reference-cli.ts" "$@"
+    ;;
+  deep-think)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/deep-think-cli.ts" "$@"
     ;;
   version|--version|-V)
-    echo "lsprag 0.1.0 (root: $ROOT)"
+    echo "lsprag 0.2.0 (root: $ROOT)"
     ;;
   help|--help|-h|"")
     cat <<'HELP'
@@ -42,11 +51,11 @@ Usage:
   lsprag <command> [options]
 
 Commands:
-  def-tree      Temporarily disabled
-  retrieve-def  Get the full source of a symbol's definition
-  token-defs    List tokens inside a symbol with their definition locations
-  token-analysis Run token-defs in analysis mode (markdown links + definition sources)
-  deep-think    BFS expansion: retrieve source + deps for a symbol and all dependencies
+  getDefinition   Get the full source of a symbol's definition (hover for variables/constants)
+  getTokens       List tokens inside a symbol with their definition locations
+  getReference    Find all callers/usages of a symbol (requires LSPRAG_LSP_PROVIDER)
+  deep-think      BFS expansion: retrieve source + deps for a symbol and all dependencies
+  def-tree        (temporarily disabled)
 
 Options:
   -h, --help      Show this help
@@ -55,13 +64,11 @@ Options:
 Run 'lsprag <command> --help' for command-specific options.
 
 Examples:
-  lsprag retrieve-def --file src/server.ts   --symbol handleRequest
-  lsprag retrieve-def --file src/server.ts   --symbol parseBody,readStream
-  lsprag retrieve-def --file src/server.ts   --location 42:15
-  lsprag retrieve-def --file src/server.ts   --line-range 120:180
-  lsprag token-defs   --file src/server.ts   --symbol handleRequest
-  lsprag token-analysis --file src/server.ts --symbol handleRequest
-  lsprag deep-think   --file src/server.ts   --symbol handleRequest --depth 2
+  lsprag getDefinition  --file "$(realpath src/server.ts)" --symbol handleRequest
+  lsprag getDefinition  --file "$(realpath src/server.ts)" --symbol parseBody --location 42:15
+  lsprag getTokens      --file "$(realpath src/server.ts)" --symbol handleRequest
+  lsprag getReference   --file "$(realpath src/server.ts)" --symbol handleRequest
+  lsprag deep-think     --file "$(realpath src/server.ts)" --symbol handleRequest --depth 2
 HELP
     ;;
   *)
