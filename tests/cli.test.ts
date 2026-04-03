@@ -17,6 +17,7 @@ const mockLspProvider   = path.join(repoRoot, "tests", "fixtures", "mock-lsp-pro
 const mockLspProviderRelativeNoDot = path.join("tests", "fixtures", "mock-lsp-provider.mjs").replace(/\\/g, "/");
 const fixtureTs = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.ts");
 const fixtureGo = path.join(repoRoot, "tests", "fixtures", "def-tree-sample.go");
+const fixtureTsComplex = path.join(repoRoot, "tests", "fixtures", "def-tree-complex.ts");
 
 function withMockLspEnv(): NodeJS.ProcessEnv {
   return {
@@ -321,6 +322,65 @@ function withMockLspEnv(): NodeJS.ProcessEnv {
   assert.equal(result.status, 0, `deep-think missing symbol should still exit 0:\n${result.stderr}`);
   assert(result.stdout.includes("NOT FOUND"), `Expected NOT FOUND message:\n${result.stdout}`);
   console.log("PASS: deep-think NOT FOUND message for missing symbol");
+}
+
+// ── deep-think: Summary section appears ──────────────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTs, "--symbol", "foo", "--depth", "2"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think summary exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("## Summary"), `Expected Summary section:\n${result.stdout}`);
+  assert(result.stdout.includes("Symbols visited"), `Expected Symbols visited metric:\n${result.stdout}`);
+  assert(result.stdout.includes("| 4 |"), `Expected 4 symbols visited:\n${result.stdout}`);
+  // Leaf nodes should include qux and baz
+  assert(result.stdout.includes("qux") && result.stdout.includes("baz"),
+    `Expected leaf nodes qux and baz in summary:\n${result.stdout}`);
+  console.log("PASS: deep-think Summary section");
+}
+
+// ── deep-think: Agent Instructions section appears ───────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTs, "--symbol", "foo", "--depth", "2"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert(result.stdout.includes("## Agent Instructions"), `Expected Agent Instructions:\n${result.stdout}`);
+  assert(result.stdout.includes("getDefinition") || result.stdout.includes("getTokens"),
+    `Expected lsprag commands in instructions:\n${result.stdout}`);
+  assert(result.stdout.includes("getReference"),
+    `Expected getReference suggestion:\n${result.stdout}`);
+  console.log("PASS: deep-think Agent Instructions section");
+}
+
+// ── deep-think: truncated nodes suggest getTokens ────────────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTsComplex, "--symbol", "entry", "--depth", "1"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think truncated exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("Truncated"), `Expected Truncated metric:\n${result.stdout}`);
+  assert(result.stdout.includes("Explore truncated"), `Expected truncated branch instructions:\n${result.stdout}`);
+  assert(result.stdout.includes("getTokens"), `Expected getTokens for truncated nodes:\n${result.stdout}`);
+  console.log("PASS: deep-think truncated nodes suggest getTokens");
+}
+
+// ── deep-think: depth=0 summary shows 1 symbol visited ──────────────────────
+{
+  const result = spawnSync(
+    "npx",
+    ["tsx", deepThinkScript, "--file", fixtureTs, "--symbol", "foo", "--depth", "0"],
+    { encoding: "utf8", cwd: repoRoot }
+  );
+  assert.equal(result.status, 0, `deep-think depth=0 summary exited ${result.status}:\n${result.stderr}`);
+  assert(result.stdout.includes("## Summary"), `Expected Summary at depth=0:\n${result.stdout}`);
+  assert(result.stdout.includes("| 1 |"), `Expected 1 symbol visited at depth=0:\n${result.stdout}`);
+  console.log("PASS: deep-think depth=0 summary shows 1 symbol");
 }
 
 console.log("PASS: all CLI tests");

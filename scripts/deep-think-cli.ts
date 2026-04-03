@@ -209,6 +209,13 @@ const queue: QueueItem[] = [{ file: rootPath, symbol: symbolName, depth: 0 }];
 
 const relPath = (p: string) => path.relative(process.cwd(), p) || p;
 
+// ── BFS metrics ──────────────────────────────────────────────────────────────
+let symbolsVisited = 0;
+let maxDepthReached = 0;
+const leafNodes: Array<{ name: string; file: string }> = [];
+const truncatedNodes: Array<{ name: string; file: string; depth: number }> = [];
+const notFoundNodes: string[] = [];
+
 console.log(`# Deep Think: '${symbolName}' (max depth: ${maxDepth})`);
 console.log(`# File: ${relPath(rootPath)}`);
 console.log("");
@@ -235,8 +242,12 @@ while (queue.length > 0) {
     console.log(`## Level ${item.depth}: ${item.symbol} — NOT FOUND in ${relPath(item.file)}`);
     if (available) console.log(`Available: ${available}`);
     console.log("");
+    notFoundNodes.push(item.symbol);
     continue;
   }
+
+  symbolsVisited++;
+  maxDepthReached = Math.max(maxDepthReached, item.depth);
 
   // Print header + full source
   const symLine = target.selectionRange.start.line + 1;
@@ -264,6 +275,12 @@ while (queue.length > 0) {
 
   const tokens = await getDecodedTokensFromSymbolWithDefs(document, target, provider);
   const resolved = tokens.filter(t => t.definition && t.definition.length > 0 && t.word && t.word !== item.symbol);
+
+  if (resolved.length === 0) {
+    leafNodes.push({ name: item.symbol, file: item.file });
+  } else if (item.depth >= maxDepth) {
+    truncatedNodes.push({ name: item.symbol, file: item.file, depth: item.depth });
+  }
 
   if (resolved.length > 0) {
     console.log("**Dependencies:**");
@@ -313,3 +330,58 @@ while (queue.length > 0) {
     console.log("");
   }
 }
+
+// ── Summary ──────────────────────────────────────────────────────────────────
+console.log("---");
+console.log("");
+console.log("## Summary");
+console.log("");
+console.log(`| Metric | Value |`);
+console.log(`|--------|-------|`);
+console.log(`| Root symbol | \`${symbolName}\` (${relPath(rootPath)}) |`);
+console.log(`| Symbols visited | ${symbolsVisited} |`);
+console.log(`| Max depth reached | ${maxDepthReached} |`);
+if (leafNodes.length > 0) {
+  console.log(`| Leaf nodes | ${leafNodes.map(n => n.name).join(", ")} |`);
+}
+if (truncatedNodes.length > 0) {
+  console.log(`| Truncated (depth limit) | ${truncatedNodes.map(n => n.name).join(", ")} |`);
+}
+if (notFoundNodes.length > 0) {
+  console.log(`| Unresolved | ${notFoundNodes.join(", ")} |`);
+}
+console.log("");
+
+// ── Agent Instructions ───────────────────────────────────────────────────────
+console.log("## Agent Instructions");
+console.log("");
+console.log("Continue exploring with these commands:");
+console.log("");
+
+// Suggest getDefinition for leaf nodes (they have source but no resolved deps — may want full context)
+if (leafNodes.length > 0) {
+  console.log("### Look up leaf node definitions");
+  for (const leaf of leafNodes.slice(0, 5)) {
+    console.log(`\`lsprag getDefinition --file "$(realpath ${relPath(leaf.file)})" --symbol ${leaf.name}\``);
+  }
+  console.log("");
+}
+
+// Suggest getTokens for truncated nodes (hit depth limit — may have more deps to discover)
+if (truncatedNodes.length > 0) {
+  console.log("### Explore truncated branches (hit depth limit)");
+  for (const trunc of truncatedNodes.slice(0, 5)) {
+    console.log(`\`lsprag getTokens --file "$(realpath ${relPath(trunc.file)})" --symbol ${trunc.name}\``);
+  }
+  console.log("");
+}
+
+// Suggest getReference for root symbol
+console.log("### Find callers of the root symbol");
+console.log(`\`lsprag getReference --file "$(realpath ${relPath(rootPath)})" --symbol ${symbolName}\``);
+console.log("");
+
+// Suggest rg for the root symbol
+console.log("### Search for related patterns");
+console.log(`\`rg -n "${symbolName}" . --type ${path.extname(rootPath) === ".go" ? "go" : "ts"}\``);
+console.log("");

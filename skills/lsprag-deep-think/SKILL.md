@@ -16,8 +16,7 @@ If `lsprag` is not found, ask the user to run `bash install.sh` from the lsprag-
 2. Lists every token dependency (what that symbol calls/uses)
 3. For each dependency, retrieves its source and its own dependencies
 4. Continues until the configured depth is reached or all symbols are visited
-
-Use this when `def-tree` shows a complex call chain and you need to understand each piece before acting.
+5. Outputs a **Summary** and **Agent Instructions** with concrete follow-up commands
 
 ## When to Use
 
@@ -25,11 +24,11 @@ Use this when `def-tree` shows a complex call chain and you need to understand e
 |-----------|----------------|
 | Writing a test for a function you haven't seen before | Yes — depth 1 or 2 |
 | Refactoring a function with many dependencies | Yes — depth 2 |
-| Pre-audit before a large change | Yes — depth 2–3 |
-| Quick lookup of what a function calls | No — use `def-tree` |
-| Just need one function's source | No — use `retrieve-def` |
+| Pre-audit before a large change | Yes — depth 2-3 |
+| Just need one function's source | No — use `getDefinition` |
+| Need token-level dependency map | No — use `getTokens` |
 
-**Start at depth 1.** If the output still has symbols you don't understand, run again with `--depth 2` for those specific symbols.
+**Start at depth 1.** Follow the Agent Instructions in the output to dig into specific branches.
 
 ## Command
 
@@ -57,12 +56,10 @@ lsprag deep-think --file "$(realpath src/server.ts)" --symbol handleRequest --de
 
 ## Level 0: handleRequest (src/server.ts:15:10)
 
-\`\`\`
 function handleRequest(req, res) {
   const body = parseBody(req);
   sendResponse(res, formatJSON(body));
 }
-\`\`\`
 
 **Dependencies:**
 
@@ -73,42 +70,48 @@ function handleRequest(req, res) {
 ---
 
 ## Level 1: parseBody (src/server.ts:42:10)
-
-\`\`\`
-function parseBody(req) {
-  return JSON.parse(req.body);
-}
-\`\`\`
-
-_No resolved dependencies (regex mode: only same-file functions are tracked)_
-
-## Level 1: sendResponse (src/server.ts:58:10)
 ...
+
+---
+
+## Summary
+
+| Metric | Value |
+|--------|-------|
+| Root symbol | `handleRequest` (src/server.ts) |
+| Symbols visited | 5 |
+| Max depth reached | 2 |
+| Leaf nodes | formatJSON |
+| Truncated (depth limit) | sendResponse |
+
+## Agent Instructions
+
+Continue exploring with these commands:
+
+### Look up leaf node definitions
+`lsprag getDefinition --file "$(realpath src/server.ts)" --symbol formatJSON`
+
+### Explore truncated branches (hit depth limit)
+`lsprag getTokens --file "$(realpath src/server.ts)" --symbol sendResponse`
+
+### Find callers of the root symbol
+`lsprag getReference --file "$(realpath src/server.ts)" --symbol handleRequest`
+
+### Search for related patterns
+`rg -n "handleRequest" . --type ts`
 ```
 
 ## Recommended Workflow
 
-### Before Writing a Test
-
 ```bash
-# Step 1: see the full call tree
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest
-
-# Step 2: deep-expand all direct dependencies
+# Step 1: expand the function's dependency graph
 lsprag deep-think --file "$(realpath src/server.ts)" --symbol handleRequest --depth 1
 
-# Step 3: if a dependency is still unclear, expand it specifically
-lsprag deep-think --file "$(realpath src/server.ts)" --symbol parseBody --depth 1
-```
+# Step 2: follow the Agent Instructions to dig into specific branches
+# (the output tells you exactly which commands to run next)
 
-### Before Refactoring
-
-```bash
-# Understand the full scope of what you're about to change
-lsprag deep-think --file "$(realpath src/server.ts)" --symbol targetFunction --depth 2
-
-# Cross-check callers with grep
-grep -rn "targetFunction" . --include="*.ts" -B1 -A1
+# Step 3: find who calls this function
+lsprag getReference --file "$(realpath src/server.ts)" --symbol handleRequest
 ```
 
 ## Notes
@@ -117,3 +120,4 @@ grep -rn "targetFunction" . --include="*.ts" -B1 -A1
 - Set `LSPRAG_LSP_PROVIDER` to enable cross-file dependency resolution.
 - BFS visits each `(file, symbol)` pair at most once — cycles are automatically prevented.
 - Output grows quickly with depth. Prefer `--depth 1` for initial exploration.
+- The **Agent Instructions** section suggests `getTokens` for branches that hit the depth limit and `getDefinition` for leaf nodes.
