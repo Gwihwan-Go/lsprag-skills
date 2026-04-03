@@ -3,11 +3,13 @@ import { pathToFileURL } from 'node:url';
 import type { DefinitionProvider } from './definitionCore';
 import type { TokenProvider } from './tokenCore';
 import type { ReferenceProvider } from './referenceCore';
+import type { CallHierarchyProvider } from './callHierarchyCore';
 
 export type ProviderBundle = {
     definition?: DefinitionProvider;
     token?: TokenProvider;
     reference?: ReferenceProvider;
+    callHierarchy?: CallHierarchyProvider;
 };
 
 let providers: ProviderBundle = {};
@@ -20,7 +22,7 @@ function normalizeModule(mod: any): ProviderBundle {
     }
 
     const bundle = (mod.providers ?? mod.providerBundle ?? null) as ProviderBundle | null;
-    if (bundle && (bundle.definition || bundle.token || bundle.reference)) {
+    if (bundle && (bundle.definition || bundle.token || bundle.reference || bundle.callHierarchy)) {
         return bundle;
     }
 
@@ -28,7 +30,8 @@ function normalizeModule(mod: any): ProviderBundle {
     return {
         token: mod.tokenProvider ?? fallback ?? undefined,
         definition: mod.definitionProvider ?? fallback ?? undefined,
-        reference: mod.referenceProvider ?? fallback ?? undefined
+        reference: mod.referenceProvider ?? fallback ?? undefined,
+        callHierarchy: mod.callHierarchyProvider ?? fallback ?? undefined
     };
 }
 
@@ -106,6 +109,17 @@ export async function getReferenceProvider(explicit?: ReferenceProvider): Promis
         return providers.reference;
     }
     throw new Error(missingProviderMessage('ReferenceProvider'));
+}
+
+export async function getCallHierarchyProvider(explicit?: CallHierarchyProvider): Promise<CallHierarchyProvider> {
+    if (explicit) {
+        return explicit;
+    }
+    await loadProvidersFromEnv();
+    if (providers.callHierarchy) {
+        return providers.callHierarchy;
+    }
+    throw new Error(missingProviderMessage('CallHierarchyProvider'));
 }
 
 export function _resetProvidersForTests(): void {

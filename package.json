@@ -16,7 +16,8 @@
     "test:unified": "tsx tests/unified-commands.test.ts",
     "test:hover": "tsx tests/hover-dispatch.core.test.ts",
     "test:reference": "tsx tests/get-reference.core.test.ts",
-    "test": "npm run test:core && npm run test:core-go && npm run test:retrieve-defs && npm run test:token-defs && npm run test:deps && npm run test:cli && npm run test:unified && npm run test:hover && npm run test:reference"
+    "test:call-hierarchy": "tsx tests/call-hierarchy.core.test.ts",
+    "test": "npm run test:core && npm run test:core-go && npm run test:retrieve-defs && npm run test:token-defs && npm run test:deps && npm run test:cli && npm run test:unified && npm run test:hover && npm run test:reference && npm run test:call-hierarchy"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
