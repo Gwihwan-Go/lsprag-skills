@@ -51,7 +51,7 @@ else
 fi
 
 # ── 3. LSPRAG_LSP_PROVIDER env var ──────────────────────────────────────────
-PROVIDER_PATH="$REPO_ROOT/providers/regex-provider.mjs"
+PROVIDER_PATH="$REPO_ROOT/providers/lsp-client.ts"
 export LSPRAG_LSP_PROVIDER="$PROVIDER_PATH"
 
 if [ -n "$SHELL_RC" ]; then

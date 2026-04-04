@@ -1,6 +1,6 @@
 ---
 name: lsprag
-description: Semantic code analysis for AI agents — build definition trees, find callers, and map call chains across TypeScript, JavaScript, Go, and Python. Use when asked to understand what a function calls, trace dependencies, or analyze code structure before editing. Works offline with no LSP server required (except getReference).
+description: Semantic code analysis for AI agents — build definition trees, find callers, and map call chains across TypeScript, JavaScript, Go, and Python. Use when asked to understand what a function calls, trace dependencies, or analyze code structure before editing. Requires language servers (typescript-language-server, gopls, pylsp).
 license: LICENSE
 ---
 
@@ -12,15 +12,14 @@ If `lsprag` is not found, ask the user to run `bash install.sh` from the lsprag-
 
 `lsprag` is a code analysis CLI. It analyzes source files to map function call trees, definitions, tokens, and references.
 
-- **Offline-first**: Regex-based analysis works with no language server for most commands. Set `LSPRAG_LSP_PROVIDER` for cross-file LSP accuracy.
-- **`getReference` requires LSP**: This command always needs `LSPRAG_LSP_PROVIDER`.
+- **LSP-powered**: All commands use real language servers for accurate cross-file analysis. `LSPRAG_LSP_PROVIDER` must be set.
 - **Supported languages**: TypeScript, JavaScript (`.ts`, `.js`), Go (`.go`), Python (`.py`)
 
 ## Tool Selection
 
 | Task | Traditional approach | lsprag |
 |------|----------------------|--------|
-| What does function X call? | `grep` + manual tracing | `lsprag def-tree --file <f> --symbol <name>` |
+| What does function X call? | `grep` + manual tracing | `lsprag callHierarchy --file <f> --symbol <name> --direction outgoing` |
 | Read a function's full source | `Read` or `grep` for body | `lsprag getDefinition --file <f> --symbol <name>` |
 | Inspect a constant or variable | Read file manually | `lsprag getDefinition --file <f> --symbol <name>` (uses hover) |
 | Jump to definition from a call site | (open file manually) | `lsprag getDefinition --file <f> --symbol <name> --location <line>:<col>` |
@@ -31,40 +30,6 @@ If `lsprag` is not found, ask the user to run `bash install.sh` from the lsprag-
 Prefer `lsprag` commands over `grep + Read` when the goal is understanding code structure or dependencies.
 
 ## Commands
-
-### def-tree: Build a Call Tree
-
-Show which functions a symbol calls, recursively.
-
-```bash
-lsprag def-tree --file <absolute_path> --symbol <name> [--depth <n>]
-```
-
-| Arg | Description | Required |
-|-----|-------------|----------|
-| `--file` | Absolute path to source file | Yes |
-| `--symbol` | Function or method name | Yes |
-| `--depth` | Max recursion depth (default: 3) | No |
-
-**Always use absolute paths:**
-
-```bash
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest --depth 3
-```
-
-**Example output:**
-
-```
-handleRequest
-├─ parseBody
-│  └─ readStream
-└─ sendResponse
-   └─ formatJSON
-```
-
-If the symbol is not found, `lsprag` prints all detected symbols — use that list to find the correct name.
-
----
 
 ### getDefinition: Get a Symbol's Full Source or Type Info
 
@@ -135,23 +100,23 @@ lsprag getReference --file <absolute_path> --symbol <name> [--location <line>:<c
 ### Understanding What a Function Does
 
 ```bash
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest
-lsprag getTokens --file "$(realpath src/server.ts)" --symbol handleRequest
+lsprag callHierarchy --file "$(realpath src/server.ts)" --symbol handleRequest --direction outgoing
+lsprag getTokens     --file "$(realpath src/server.ts)" --symbol handleRequest
 lsprag getDefinition --file "$(realpath src/server.ts)" --symbol parseBody
 ```
 
 ### Before Modifying a Function
 
 ```bash
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol targetFunction --depth 4
-lsprag getTokens --file "$(realpath src/server.ts)" --symbol targetFunction
-lsprag getReference --file "$(realpath src/server.ts)" --symbol targetFunction
+lsprag callHierarchy --file "$(realpath src/server.ts)" --symbol targetFunction --direction outgoing
+lsprag getTokens     --file "$(realpath src/server.ts)" --symbol targetFunction
+lsprag getReference  --file "$(realpath src/server.ts)" --symbol targetFunction
 ```
 
 ### Go Codebases
 
 ```bash
-lsprag def-tree      --file "$(realpath main.go)" --symbol HandleRequest --depth 3
+lsprag callHierarchy --file "$(realpath main.go)" --symbol HandleRequest --direction outgoing
 lsprag getDefinition --file "$(realpath main.go)" --symbol HandleRequest
 lsprag getTokens     --file "$(realpath main.go)" --symbol HandleRequest
 lsprag getReference  --file "$(realpath main.go)" --symbol HandleRequest
@@ -159,8 +124,7 @@ lsprag getReference  --file "$(realpath main.go)" --symbol HandleRequest
 
 ## Notes
 
-- Regex mode analyzes only the given file. For cross-file resolution, configure `LSPRAG_LSP_PROVIDER`.
+- All commands require `LSPRAG_LSP_PROVIDER` to be set. Run `bash install.sh` to configure it automatically.
 - Arrow functions and class methods are detected in TypeScript/JavaScript.
-- `def-tree` detects cycles and marks them to prevent infinite recursion.
-- `getReference` always requires `LSPRAG_LSP_PROVIDER`. It will exit with an error if not set.
-- When `LSPRAG_LSP_PROVIDER` is set and the provider exposes `getHover`, `getDefinition` returns full type information for variables and constants.
+- `deep-think` detects cycles and marks them to prevent infinite recursion.
+- `getDefinition` returns full type information for variables and constants via LSP hover.

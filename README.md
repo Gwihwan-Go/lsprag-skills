@@ -1,6 +1,6 @@
 # lsprag-skills
 
-Portable LSP code analysis for AI agents — build definition trees, retrieve source, trace dependencies, and deep-expand call graphs. Works offline with no VS Code required.
+Portable LSP code analysis for AI agents — build definition trees, retrieve source, trace dependencies, and deep-expand call graphs. Uses real language servers (no VS Code required).
 
 ## What Is This?
 
@@ -8,13 +8,19 @@ A set of `lsprag` skills that give AI agents (Claude Code, OpenCode, etc.) a `ls
 
 | Command | What it does |
 |---------|-------------|
-| `lsprag def-tree` | Build a call tree from a function (what does it call, recursively?) |
 | `lsprag getDefinition` | Get the full source of a symbol, or hover info for variables/constants |
 | `lsprag getTokens` | Decompose a symbol into tokens and show where each is defined |
-| `lsprag getReference` | Find all callers / usages of a symbol (requires LSP) |
+| `lsprag getReference` | Find all callers / usages of a symbol |
+| `lsprag callHierarchy` | Show incoming/outgoing call hierarchy for a symbol |
 | `lsprag deep-think` | BFS expansion: retrieve source + deps for a symbol and all its transitive dependencies |
 
 **Supported languages:** TypeScript, JavaScript, Go, Python
+
+## Prerequisites
+
+- **Node.js** >= 20 and **npm** (required)
+- **Go** (if analyzing Go code — needed to install `gopls`)
+- **Python 3** + **pip** (if analyzing Python code — needed to install `pylsp`)
 
 ## Install
 
@@ -23,14 +29,23 @@ git clone https://github.com/Gwihwan-Go/lsprag-skills ~/.lsprag-skills
 bash ~/.lsprag-skills/install.sh
 ```
 
-Then open a new terminal (or `source ~/.bashrc`).
+Then **open a new terminal** (or run `source ~/.bashrc` / `source ~/.zshrc`).
+
+Confirm it works:
+
+```bash
+lsprag --version
+```
 
 The installer handles everything in one step:
-- npm dependencies
-- `lsprag` CLI symlink to `~/.local/bin`
-- Environment variables (`LSPRAG_SKILLS_ROOT`, `LSPRAG_LSP_PROVIDER`)
-- LSP servers for detected languages (gopls, tsserver, pylsp)
-- Claude Code / OpenCode configuration (if present)
+1. Installs npm dependencies
+2. Creates the `lsprag` CLI symlink at `~/.local/bin/lsprag`
+3. Sets environment variables (`LSPRAG_SKILLS_ROOT`, `LSPRAG_LSP_PROVIDER`)
+4. Installs LSP servers for detected languages:
+   - **TypeScript/JavaScript**: `typescript-language-server` (via npm)
+   - **Go**: `gopls` (via `go install`)
+   - **Python**: `pylsp` (via pip)
+5. Configures Claude Code / OpenCode (if present)
 
 ### Install individual LSP servers
 
@@ -51,20 +66,6 @@ bash ~/.lsprag-skills/scripts/update.sh
 This checks (but never installs) that everything is in place.
 
 ## CLI Usage
-
-### def-tree — Call Tree
-
-```bash
-lsprag def-tree --file "$(realpath src/server.ts)" --symbol handleRequest --depth 3
-```
-
-```
-handleRequest
-├─ parseBody
-│  └─ readStream
-└─ sendResponse
-   └─ formatJSON
-```
 
 ### getDefinition — Full Source or Type Info
 
@@ -97,13 +98,18 @@ Tokens in 'handleRequest' (src/server.ts:15:10):
 
 ### getReference — Find All Callers
 
-Requires LSP — exits with an error if `LSPRAG_LSP_PROVIDER` is not set.
-
 ```bash
 lsprag getReference --file "$(realpath src/server.ts)" --symbol handleRequest
 ```
 
-### deep-think — BFS Dependency Expansion
+### callHierarchy — Incoming/Outgoing Calls
+
+```bash
+lsprag callHierarchy --file "$(realpath src/server.ts)" --symbol handleRequest --direction incoming
+lsprag callHierarchy --file "$(realpath src/server.ts)" --symbol handleRequest --direction outgoing
+```
+
+### deep-think — Breadth-First Dependency Expansion
 
 ```bash
 lsprag deep-think --file "$(realpath src/server.ts)" --symbol handleRequest --depth 2
@@ -115,12 +121,12 @@ Start at `--depth 1` for initial exploration; increase for deeper understanding.
 
 | Goal | Use |
 |------|-----|
-| What does function X call? | `lsprag def-tree` |
 | Read a function's full source | `lsprag getDefinition` |
 | Inspect a constant or variable | `lsprag getDefinition` (hover mode) |
 | Jump to definition from a call site | `lsprag getDefinition --location <line>:<col>` |
 | What identifiers does a function depend on? | `lsprag getTokens` |
-| Who calls this function? | `lsprag getReference` |
+| Who calls this function? | `lsprag getReference` or `lsprag callHierarchy --direction incoming` |
+| What does this function call? | `lsprag callHierarchy --direction outgoing` |
 | Understand a complex function deeply | `lsprag deep-think` |
 | Quick text search | `grep -rn <name> . --include="*.ts"` |
 
@@ -156,8 +162,9 @@ scripts/
   lsprag                  shell wrapper — the installed CLI
   get-definition-cli.ts   retrieve a symbol's full source or hover info
   get-tokens-cli.ts       decompose a symbol into token dependencies
-  get-reference-cli.ts    find all callers / usages (requires LSP)
-  def-tree-cli.ts         build a call tree
+  get-reference-cli.ts    find all callers / usages
+  call-hierarchy-cli.ts   incoming/outgoing call hierarchy
+  def-tree-cli.ts         build a call tree (currently disabled)
   deep-think-cli.ts       BFS expansion across transitive dependencies
   install-lsp-go.sh       install gopls
   install-lsp-ts.sh       install tsserver
@@ -170,7 +177,7 @@ skills/
     SKILL.md
 src/                      portable TypeScript core modules
 providers/
-  regex-provider.mjs      offline regex-based provider (default)
+  lsp-client.ts            LSP client provider (spawns real language servers)
 tools/                    OpenCode tool wrappers
 tests/                    test suite
 ```
@@ -178,6 +185,6 @@ tests/                    test suite
 ## Tests
 
 ```bash
-npm test                 # all tests (no LSP server needed)
+npm test                 # all tests (requires LSP servers: typescript-language-server, gopls)
 npm run test:opencode    # OpenCode integration (requires opencode CLI)
 ```

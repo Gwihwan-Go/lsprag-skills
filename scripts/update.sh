@@ -52,7 +52,7 @@ fi
 if [ -n "${LSPRAG_LSP_PROVIDER:-}" ]; then
   ok "LSPRAG_LSP_PROVIDER=$LSPRAG_LSP_PROVIDER"
 else
-  warn "LSPRAG_LSP_PROVIDER is not set (regex fallback will be used)"
+  warn "LSPRAG_LSP_PROVIDER is not set — LSP provider is required"
 fi
 
 # ── 4. LSP servers (detect only) ─────────────────────────────────────────────

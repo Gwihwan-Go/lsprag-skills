@@ -116,8 +116,7 @@ lsprag getReference --file "$(realpath src/server.ts)" --symbol handleRequest
 
 ## Notes
 
-- In regex mode, cross-file dependencies are **not** resolved. Only same-file function definitions are tracked.
-- Set `LSPRAG_LSP_PROVIDER` to enable cross-file dependency resolution.
+- `LSPRAG_LSP_PROVIDER` must be set. Run `bash install.sh` to configure it automatically.
 - BFS visits each `(file, symbol)` pair at most once — cycles are automatically prevented.
 - Output grows quickly with depth. Prefer `--depth 1` for initial exploration.
 - The **Agent Instructions** section suggests `getTokens` for branches that hit the depth limit and `getDefinition` for leaf nodes.
