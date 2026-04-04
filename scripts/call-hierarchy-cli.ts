@@ -100,16 +100,11 @@ try {
 
 // Normalise module shape
 function extractProvider(mod: any): CallHierarchyProvider {
-    // Prefer the full provider (which may also expose getSymbols/getDocumentSymbols)
-    const fallback = mod.provider ?? mod.default ?? mod;
-    if (typeof fallback?.prepareCallHierarchy === "function") return fallback;
-
-    // Fall back to bundle's callHierarchy-specific provider
     const bundle = mod.providers ?? mod.providerBundle ?? null;
     if (bundle?.callHierarchy) return bundle.callHierarchy;
 
-    const explicit = mod.callHierarchyProvider;
-    if (typeof explicit?.prepareCallHierarchy === "function") return explicit;
+    const fallback = mod.callHierarchyProvider ?? mod.provider ?? mod.default ?? mod;
+    if (typeof fallback?.prepareCallHierarchy === "function") return fallback;
 
     console.error("Error: the loaded provider does not expose a prepareCallHierarchy method.");
     console.error(
