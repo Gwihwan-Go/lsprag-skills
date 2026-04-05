@@ -131,10 +131,14 @@ if (rawLocation) {
     position = { line: loc1Line - 1, character: loc1Col - 1 };
 } else {
     // Try to get symbols from the provider to resolve by name.
-    // The provider may expose getSymbols or getDocumentSymbols.
+    // The callHierarchy sub-provider may not have getSymbols, so also check the root module.
     const getSymbols =
         (provider as any).getSymbols ??
-        (provider as any).getDocumentSymbols;
+        (provider as any).getDocumentSymbols ??
+        rawMod.provider?.getSymbols ??
+        rawMod.provider?.getDocumentSymbols ??
+        rawMod.getSymbols ??
+        rawMod.getDocumentSymbols;
 
     if (!getSymbols) {
         console.error(

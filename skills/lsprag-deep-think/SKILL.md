@@ -1,10 +1,12 @@
 ---
 name: lsprag-deep-think
-description: High-effort code understanding via BFS dependency expansion. Use when you need to deeply understand a complex function before writing tests, refactoring, or debugging — it recursively retrieves the source and dependencies of every symbol a function touches.
+description: BFS dependency expansion — one of several lsprag analysis skills. See the main lsprag skill for the full adaptive analysis framework including when to use deep-think vs getDefinition, getTokens, getReference, listSymbols, and callChain.
 license: LICENSE
 ---
 
 # LSPRAG Deep Think — BFS Code Understanding
+
+> **Note**: `deep-think` is one tool in the lsprag analysis toolkit. See the **main lsprag skill** for the full adaptive analysis loop, decision framework, and when to use each skill.
 
 If `lsprag` is not found, ask the user to run `bash install.sh` from the lsprag-skills root directory.
 

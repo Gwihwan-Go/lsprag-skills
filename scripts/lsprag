@@ -10,6 +10,14 @@
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 ROOT="${LSPRAG_SKILLS_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 
+# Auto-detect LSP provider if not explicitly set
+# Prefer lsp-client.ts (real LSP via pyright/tsserver/gopls) over jedi bridge
+if [ -z "$LSPRAG_LSP_PROVIDER" ] && [ -f "$ROOT/providers/lsp-client.ts" ]; then
+  export LSPRAG_LSP_PROVIDER="$ROOT/providers/lsp-client.ts"
+elif [ -z "$LSPRAG_LSP_PROVIDER" ] && [ -f "$ROOT/providers/jedi-provider.mjs" ]; then
+  export LSPRAG_LSP_PROVIDER="$ROOT/providers/jedi-provider.mjs"
+fi
+
 CMD="${1:-}"
 shift 2>/dev/null || true
 
@@ -37,6 +45,12 @@ case "$CMD" in
   getReference)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/get-reference-cli.ts" "$@"
     ;;
+  listSymbols)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/list-symbols-cli.ts" "$@"
+    ;;
+  callChain)
+    exec npx --prefix "$ROOT" tsx "$ROOT/scripts/call-hierarchy-cli.ts" --direction incoming "$@"
+    ;;
   callHierarchy)
     exec npx --prefix "$ROOT" tsx "$ROOT/scripts/call-hierarchy-cli.ts" "$@"
     ;;
@@ -54,12 +68,13 @@ Usage:
   lsprag <command> [options]
 
 Commands:
+  listSymbols     List all functions, classes, and symbols in a file
   getDefinition   Get the full source of a symbol's definition (hover for variables/constants)
   getTokens       List tokens inside a symbol with their definition locations
-  getReference    Find all callers/usages of a symbol (requires LSPRAG_LSP_PROVIDER)
-  callHierarchy   Show incoming/outgoing call hierarchy (requires LSPRAG_LSP_PROVIDER)
+  getReference    Find all callers/usages of a symbol
+  callChain       Trace incoming call chain (who calls this, recursively)
+  callHierarchy   Show incoming/outgoing call hierarchy (both directions)
   deep-think      BFS expansion: retrieve source + deps for a symbol and all dependencies
-  def-tree        (temporarily disabled)
 
 Options:
   -h, --help      Show this help
@@ -68,11 +83,11 @@ Options:
 Run 'lsprag <command> --help' for command-specific options.
 
 Examples:
+  lsprag listSymbols    --file "$(realpath src/server.ts)"
   lsprag getDefinition  --file "$(realpath src/server.ts)" --symbol handleRequest
-  lsprag getDefinition  --file "$(realpath src/server.ts)" --symbol parseBody --location 42:15
   lsprag getTokens      --file "$(realpath src/server.ts)" --symbol handleRequest
   lsprag getReference   --file "$(realpath src/server.ts)" --symbol handleRequest
-  lsprag callHierarchy  --file "$(realpath src/server.ts)" --symbol handleRequest --direction incoming
+  lsprag callChain      --file "$(realpath src/server.ts)" --symbol handleRequest
   lsprag deep-think     --file "$(realpath src/server.ts)" --symbol handleRequest --depth 2
 HELP
     ;;

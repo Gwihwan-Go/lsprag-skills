@@ -8,10 +8,11 @@ A set of `lsprag` skills that give AI agents (Claude Code, OpenCode, etc.) a `ls
 
 | Command | What it does |
 |---------|-------------|
+| `lsprag listSymbols` | List all functions, classes, and symbols in a file |
 | `lsprag getDefinition` | Get the full source of a symbol, or hover info for variables/constants |
 | `lsprag getTokens` | Decompose a symbol into tokens and show where each is defined |
 | `lsprag getReference` | Find all callers / usages of a symbol |
-| `lsprag callHierarchy` | Show incoming/outgoing call hierarchy for a symbol |
+| `lsprag callChain` | Trace incoming call chain (who calls this, recursively) |
 | `lsprag deep-think` | BFS expansion: retrieve source + deps for a symbol and all its transitive dependencies |
 
 **Supported languages:** TypeScript, JavaScript, Go, Python
@@ -67,6 +68,23 @@ This checks (but never installs) that everything is in place.
 
 ## CLI Usage
 
+### listSymbols — File Overview
+
+```bash
+lsprag listSymbols --file "$(realpath src/server.ts)"
+```
+
+```
+Symbols in src/server.ts:
+
+Functions:
+  handleRequest                             L3 (12 lines)
+  parseBody                                 L30 (8 lines)
+
+Constants:
+  MAX_RETRIES                               L1 (1 lines)
+```
+
 ### getDefinition — Full Source or Type Info
 
 Functions get full source; variables/constants get hover type info.
@@ -102,11 +120,17 @@ Tokens in 'handleRequest' (src/server.ts:15:10):
 lsprag getReference --file "$(realpath src/server.ts)" --symbol handleRequest
 ```
 
-### callHierarchy — Incoming/Outgoing Calls
+### callChain — Trace Incoming Call Chain
 
 ```bash
-lsprag callHierarchy --file "$(realpath src/server.ts)" --symbol handleRequest --direction incoming
-lsprag callHierarchy --file "$(realpath src/server.ts)" --symbol handleRequest --direction outgoing
+lsprag callChain --file "$(realpath src/server.ts)" --symbol handleRequest
+```
+
+```
+Incoming calls to 'handleRequest':
+handleRequest (src/server.ts:3)
+└─ routeRequest (src/router.ts:15)
+   └─ main (src/index.ts:8)
 ```
 
 ### deep-think — Breadth-First Dependency Expansion
@@ -121,12 +145,12 @@ Start at `--depth 1` for initial exploration; increase for deeper understanding.
 
 | Goal | Use |
 |------|-----|
+| What's in this file? | `lsprag listSymbols` |
 | Read a function's full source | `lsprag getDefinition` |
 | Inspect a constant or variable | `lsprag getDefinition` (hover mode) |
 | Jump to definition from a call site | `lsprag getDefinition --location <line>:<col>` |
 | What identifiers does a function depend on? | `lsprag getTokens` |
-| Who calls this function? | `lsprag getReference` or `lsprag callHierarchy --direction incoming` |
-| What does this function call? | `lsprag callHierarchy --direction outgoing` |
+| Who calls this function? | `lsprag getReference` or `lsprag callChain` |
 | Understand a complex function deeply | `lsprag deep-think` |
 | Quick text search | `grep -rn <name> . --include="*.ts"` |
 
@@ -162,9 +186,9 @@ scripts/
   lsprag                  shell wrapper — the installed CLI
   get-definition-cli.ts   retrieve a symbol's full source or hover info
   get-tokens-cli.ts       decompose a symbol into token dependencies
+  list-symbols-cli.ts     list all symbols in a file
   get-reference-cli.ts    find all callers / usages
-  call-hierarchy-cli.ts   incoming/outgoing call hierarchy
-  def-tree-cli.ts         build a call tree (currently disabled)
+  call-hierarchy-cli.ts   incoming/outgoing call hierarchy (also powers callChain)
   deep-think-cli.ts       BFS expansion across transitive dependencies
   install-lsp-go.sh       install gopls
   install-lsp-ts.sh       install tsserver
